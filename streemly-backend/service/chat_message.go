@@ -18,7 +18,6 @@ const (
 )
 
 type Message struct {
-	Source     Source
 	Id         string
 	Author     Author
 	Content    []MessagePart

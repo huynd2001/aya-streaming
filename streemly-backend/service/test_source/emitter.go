@@ -10,11 +10,11 @@ type TestEmitter struct {
 	updateEmitter chan service.MessageUpdate
 }
 
-func (testEmitter TestEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (testEmitter *TestEmitter) UpdateEmitter() chan service.MessageUpdate {
 	return testEmitter.updateEmitter
 }
 
-func NewEmitter() service.ChatEmitter {
+func NewEmitter() *TestEmitter {
 
 	messageUpdates := make(chan service.MessageUpdate)
 
@@ -25,8 +25,7 @@ func NewEmitter() service.ChatEmitter {
 				Source: service.TestSource,
 				Update: service.New,
 				Message: service.Message{
-					Source: service.TestSource,
-					Id:     fmt.Sprint("{}", i),
+					Id: fmt.Sprint("{}", i),
 					Author: service.Author{
 						Username: "Gamers",
 						IsAdmin:  true,
@@ -37,7 +36,7 @@ func NewEmitter() service.ChatEmitter {
 					Attachment: []string{},
 				},
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second * 5)
 			i++
 		}
 	}()
@@ -49,8 +48,7 @@ func NewEmitter() service.ChatEmitter {
 				Source: service.TestSource,
 				Update: service.Delete,
 				Message: service.Message{
-					Source: service.TestSource,
-					Id:     fmt.Sprint("{}", i),
+					Id: fmt.Sprint("{}", i),
 					Author: service.Author{
 						Username: "Gamers",
 						IsAdmin:  true,
@@ -61,12 +59,12 @@ func NewEmitter() service.ChatEmitter {
 					Attachment: []string{},
 				},
 			}
-			time.Sleep(2 * time.Second)
+			time.Sleep(2 * time.Second * 5)
 			i++
 		}
 	}()
 
-	return TestEmitter{
+	return &TestEmitter{
 		updateEmitter: messageUpdates,
 	}
 
