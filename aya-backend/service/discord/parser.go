@@ -1,11 +1,11 @@
 package discord_source
 
 import (
+	. "aya-backend/service"
 	"fmt"
 	dg "github.com/bwmarrin/discordgo"
 	"regexp"
 	"slices"
-	. "streemly-backend/service"
 	"strings"
 )
 

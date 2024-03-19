@@ -1,10 +1,10 @@
 package discord_source
 
 import (
+	"aya-backend/service"
 	"fmt"
 	dg "github.com/bwmarrin/discordgo"
 	"os"
-	"streemly-backend/service"
 )
 
 type DiscordEmitter struct {

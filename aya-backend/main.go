@@ -1,12 +1,12 @@
 package main
 
 import (
+	discordsource "aya-backend/service/discord"
 	"fmt"
 	"github.com/lpernett/godotenv"
 	"log"
 	"os"
 	"os/signal"
-	discordsource "streemly-backend/service/discord"
 	"syscall"
 )
 
