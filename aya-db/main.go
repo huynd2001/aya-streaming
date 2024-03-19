@@ -55,4 +55,6 @@ func main() {
 		fmt.Printf("Error when migrating the interface Session: %s\n", err.Error())
 		return
 	}
+
+	fmt.Printf("Migrate database successfully! Have fun developing.")
 }

@@ -1,6 +1,9 @@
 package main
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type Discord struct {
 	guildId   string
@@ -15,9 +18,11 @@ type Youtube struct {
 
 type Session struct {
 	gorm.Model
-	Id        string
-	Discord   string
-	Twitch    string
-	Youtube   string
-	StartTime int
+	Id         string
+	Discord    string
+	Twitch     string
+	Youtube    string
+	CreateTime time.Time
+	UpdateTime time.Time
+	EndTime    time.Time
 }
