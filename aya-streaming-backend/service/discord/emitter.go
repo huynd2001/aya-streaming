@@ -40,6 +40,18 @@ func NewEmitter(token string) *DiscordEmitter {
 
 	client.AddHandler(func(s *dg.Session, m *dg.MessageCreate) {
 		if m.GuildID == guildId && m.ChannelID == channelId {
+
+			color := client.State.UserColor(m.Author.ID, m.ChannelID)
+
+			user, err := client.User(m.Author.ID)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			userPerm, err := client.State.UserChannelPermissions(m.Author.ID, m.ChannelID)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
 			messageUpdates <- service.MessageUpdate{
 				Source: service.Discord,
 				Update: service.New,
@@ -47,9 +59,9 @@ func NewEmitter(token string) *DiscordEmitter {
 					Id: m.ID,
 					Author: service.Author{
 						Username: m.Author.Username,
-						IsAdmin:  false,
-						IsBot:    false,
-						Color:    "",
+						IsAdmin:  (userPerm & dg.PermissionAdministrator) != 0,
+						IsBot:    user.Bot,
+						Color:    fmt.Sprintf("#%06x", color),
 					},
 					Content: discordMsgParser.ParseMessage(m.Message),
 				},
@@ -57,14 +69,10 @@ func NewEmitter(token string) *DiscordEmitter {
 		}
 	})
 
-	// Open a websocket connection to Discord and begin listening.
 	err = client.Open()
 	if err != nil {
 		panic(err)
 	}
-
-	// Cleanly close down the Discord session.
-	//_ = client.Close()
 
 	return &DiscordEmitter{
 		DiscordClient: client,
