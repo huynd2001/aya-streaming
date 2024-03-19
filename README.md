@@ -1,11 +1,11 @@
-# streemly
+# Aya Streaming Service
 
-Streemly Is a website that helps combine multiple streams of chat messages, unifying the experiences
+Aya is a service that helps combine multiple streams of chat messages, unifying the experiences
 
-# Contributions
+## Contributions
 
 Please make contributions by creating a pull request for the repository.
 
-# Using instructions
+## Using instructions
 
 TBD
