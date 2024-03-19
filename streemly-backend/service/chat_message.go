@@ -24,17 +24,19 @@ type Message struct {
 	Attachment []string
 }
 
+type Emoji struct {
+	Id  string
+	Alt string
+}
+
+type Format struct {
+	Color string
+}
+
 type MessagePart struct {
 	CleanContent string
-
-	Emoji struct {
-		Id  string
-		Alt string
-	}
-
-	Format struct {
-		Color string
-	}
+	Emoji        Emoji
+	Format       Format
 }
 
 type Author struct {

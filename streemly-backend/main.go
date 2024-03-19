@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	discordsource "streemly-backend/service/discord"
-	testsource "streemly-backend/service/test_source"
 	"syscall"
 )
 
@@ -19,7 +18,7 @@ func main() {
 	}
 
 	fmt.Println("Hello, world!")
-	testEmitter := testsource.NewEmitter()
+	//testEmitter := testsource.NewEmitter()
 
 	discordToken := os.Getenv("DISCORD_TOKEN")
 	discordEmitter := discordsource.NewEmitter(discordToken)
@@ -29,9 +28,9 @@ func main() {
 
 	for {
 		select {
-		case testMsg := <-testEmitter.UpdateEmitter():
-			fmt.Println("Message from test source!")
-			fmt.Println("{}", testMsg)
+		//case testMsg := <-testEmitter.UpdateEmitter():
+		//	fmt.Println("Message from test source!")
+		//	fmt.Println("{}", testMsg)
 		case discordMsg := <-discordEmitter.UpdateEmitter():
 			fmt.Println("Message from discord!")
 			fmt.Println("{}", discordMsg)

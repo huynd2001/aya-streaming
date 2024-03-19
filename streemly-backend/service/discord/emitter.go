@@ -19,7 +19,7 @@ func (discordEmitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate
 func NewEmitter(token string) *DiscordEmitter {
 	messageUpdates := make(chan service.MessageUpdate)
 
-	client, err := dg.New(token)
+	client, err := dg.New("Bot " + token)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +34,9 @@ func NewEmitter(token string) *DiscordEmitter {
 		panic(fmt.Errorf("err"))
 	}
 
-	client.Identify.Intents = dg.IntentsGuildMessages
+	discordMsgParser := NewParser(client)
+
+	client.Identify.Intents = dg.IntentsAll
 
 	client.AddHandler(func(s *dg.Session, m *dg.MessageCreate) {
 		if m.GuildID == guildId && m.ChannelID == channelId {
@@ -49,11 +51,7 @@ func NewEmitter(token string) *DiscordEmitter {
 						IsBot:    false,
 						Color:    "",
 					},
-					Content: []service.MessagePart{
-						{
-							CleanContent: m.Content,
-						},
-					},
+					Content: discordMsgParser.ParseMessage(m.Message),
 				},
 			}
 		}
