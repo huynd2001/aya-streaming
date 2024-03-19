@@ -3,7 +3,7 @@ package main
 import (
 	discordsource "aya-backend/service/discord"
 	"fmt"
-	"github.com/lpernett/godotenv"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"os/signal"
