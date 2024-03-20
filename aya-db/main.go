@@ -5,7 +5,6 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"log"
 	"os"
 	"path"
 )
@@ -19,7 +18,7 @@ const (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		fmt.Printf("Error: Cannot load .env file: %s\n", err.Error())
 	}
 
 	fmt.Println("Initializing database")
