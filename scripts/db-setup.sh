@@ -2,4 +2,4 @@
 
 set -e
 go build -C aya-db-migration -o ../output/aya-db-migration
-./output/aya-db
+./output/aya-db-migration
