@@ -25,7 +25,7 @@ func NewEmitter() *TestEmitter {
 				Source: service.TestSource,
 				Update: service.New,
 				Message: service.Message{
-					Id: fmt.Sprint("{}", i),
+					Id: fmt.Sprintf("%d", i),
 					Author: service.Author{
 						Username: "Gamers",
 						IsAdmin:  true,
@@ -48,7 +48,7 @@ func NewEmitter() *TestEmitter {
 				Source: service.TestSource,
 				Update: service.Delete,
 				Message: service.Message{
-					Id: fmt.Sprint("{}", i),
+					Id: fmt.Sprintf("%d", i),
 					Author: service.Author{
 						Username: "Gamers",
 						IsAdmin:  true,
@@ -63,6 +63,8 @@ func NewEmitter() *TestEmitter {
 			i++
 		}
 	}()
+
+	fmt.Println("New Test Emitter created!")
 
 	return &TestEmitter{
 		updateEmitter: messageUpdates,

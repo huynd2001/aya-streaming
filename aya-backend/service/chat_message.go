@@ -18,36 +18,36 @@ const (
 )
 
 type Message struct {
-	Id         string
-	Author     Author
-	Content    []MessagePart
-	Attachment []string
+	Id         string        `json:"id"`
+	Author     Author        `json:"author"`
+	Content    []MessagePart `json:"content"`
+	Attachment []string      `json:"attachment"`
 }
 
 type Emoji struct {
-	Id  string
-	Alt string
+	Id  string `json:"id"`
+	Alt string `json:"alt"`
 }
 
 type Format struct {
-	Color string
+	Color string `json:"color"`
 }
 
 type MessagePart struct {
-	CleanContent string
-	Emoji        Emoji
-	Format       Format
+	CleanContent string `json:"cleanContent"`
+	Emoji        Emoji  `json:"emoji"`
+	Format       Format `json:"format"`
 }
 
 type Author struct {
-	Username string
-	IsAdmin  bool
-	IsBot    bool
-	Color    string
+	Username string `json:"username"`
+	IsAdmin  bool   `json:"isAdmin"`
+	IsBot    bool   `json:"isBot"`
+	Color    string `json:"color"`
 }
 
 type MessageUpdate struct {
-	Source  Source
-	Update  Update
-	Message Message
+	Source  Source  `json:"source"`
+	Update  Update  `json:"update"`
+	Message Message `json:"message"`
 }

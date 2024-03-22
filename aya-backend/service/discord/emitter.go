@@ -16,22 +16,24 @@ func (discordEmitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate
 	return discordEmitter.updateEmitter
 }
 
-func NewEmitter(token string) *DiscordEmitter {
+func NewEmitter(token string) (*DiscordEmitter, error) {
 	messageUpdates := make(chan service.MessageUpdate)
 
 	client, err := dg.New("Bot " + token)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
+	// TODO: work with database to retrieve the guild id for system
 
 	guildId := os.Getenv("TEST_GUILD_ID")
 	if guildId == "" {
-		panic(fmt.Errorf("err"))
+		return nil, fmt.Errorf("no Guild specified")
 	}
 
 	channelId := os.Getenv("TEST_CHANNEL_ID")
 	if channelId == "" {
-		panic(fmt.Errorf("err"))
+		return nil, fmt.Errorf("no Channel specified")
 	}
 
 	discordMsgParser := NewParser(client)
@@ -71,11 +73,13 @@ func NewEmitter(token string) *DiscordEmitter {
 
 	err = client.Open()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
+	fmt.Printf("New Discord Emitter created!")
 
 	return &DiscordEmitter{
 		DiscordClient: client,
 		updateEmitter: messageUpdates,
-	}
+	}, nil
 }
