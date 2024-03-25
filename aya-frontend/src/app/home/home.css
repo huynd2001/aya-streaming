@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.aya-menu {
+    flex-basis: 270px;
+}
+
+.main-page-wrapper {
+    display: flex;
+
+}
