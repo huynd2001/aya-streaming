@@ -7,6 +7,16 @@ import (
 	ws "github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"os"
+	"slices"
+)
+
+const (
+	WEBSITE_HOST_ORIGIN_ENV = "WEBSITE_HOST_ORIGIN"
+)
+
+var (
+	acceptableOrigin []string
 )
 
 type WSServer struct {
@@ -35,6 +45,8 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 		delete(wsServer.ChanMap, id)
 	}(c)
 
+	fmt.Println("Connection found!")
+
 	for {
 		newMessage := <-msgChannel
 		newMessageStr, err := json.Marshal(newMessage)
@@ -52,14 +64,26 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 func NewWSServer() (*WSServer, error) {
 
+	websiteOrigin := os.Getenv(WEBSITE_HOST_ORIGIN_ENV)
+	if websiteOrigin != "" {
+		acceptableOrigin = append(acceptableOrigin, websiteOrigin)
+	}
+
 	upg := ws.Upgrader{}
+
+	// Check origin
+	// IDK why postman did not get caught by this, but anyway
+	upg.CheckOrigin = func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		return slices.Contains(acceptableOrigin, origin)
+	}
 
 	wsServer := WSServer{
 		upg:     &upg,
 		ChanMap: make(map[string]*chan MessageUpdate),
 	}
 
-	http.HandleFunc("/test/{id}", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/stream/{id}", func(w http.ResponseWriter, r *http.Request) {
 		handleWSConn(&wsServer, w, r)
 	})
 

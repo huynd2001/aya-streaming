@@ -36,7 +36,7 @@ func NewEmitter() *TestEmitter {
 					Attachment: []string{},
 				},
 			}
-			time.Sleep(1 * time.Second * 5)
+			time.Sleep(1 * time.Second * 15)
 			i++
 		}
 	}()
@@ -59,7 +59,7 @@ func NewEmitter() *TestEmitter {
 					Attachment: []string{},
 				},
 			}
-			time.Sleep(2 * time.Second * 5)
+			time.Sleep(2 * time.Second * 30)
 			i++
 		}
 	}()
