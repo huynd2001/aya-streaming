@@ -88,7 +88,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 	case ChannelRegex:
 		channelId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
 		defaultResult := MessagePart{
-			CleanContent: "#unknown-channel",
+			Content: "#unknown-channel",
 			Format: Format{
 				Color: "#ffffff",
 			},
@@ -99,7 +99,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			return defaultResult
 		}
 		return MessagePart{
-			CleanContent: fmt.Sprintf("#%s", channel.Name),
+			Content: fmt.Sprintf("#%s", channel.Name),
 			Format: Format{
 				Color: "#ffffff",
 			},
@@ -107,7 +107,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 	case MentionRegex:
 		userId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
 		defaultResult := MessagePart{
-			CleanContent: "@unknown-user",
+			Content: "@unknown-user",
 			Format: Format{
 				Color: "#ffffff",
 			},
@@ -133,7 +133,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 		}
 
 		return MessagePart{
-			CleanContent: fmt.Sprintf("@%s", username),
+			Content: fmt.Sprintf("@%s", username),
 			Format: Format{
 				Color: fmt.Sprintf("#%06x", color),
 			},
@@ -141,7 +141,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 	case RoleRegex:
 		roleId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
 		defaultResult := MessagePart{
-			CleanContent: "@unknown-role",
+			Content: "@unknown-role",
 			Format: Format{
 				Color: "#ffffff",
 			},
@@ -159,7 +159,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			return defaultResult
 		}
 		return MessagePart{
-			CleanContent: fmt.Sprintf("@%s", guildRoles[idx].Name),
+			Content: fmt.Sprintf("@%s", guildRoles[idx].Name),
 			Format: Format{
 				Color: fmt.Sprintf("#%06x", guildRoles[idx].Color),
 			},
@@ -167,7 +167,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 	case Everyone:
 	case Here:
 		return MessagePart{
-			CleanContent: content,
+			Content: content,
 			Format: Format{
 				Color: "#ffffff",
 			},
@@ -209,7 +209,7 @@ func (parser *DiscordMessageParser) ParseMessage(message *dg.Message) []MessageP
 		}
 		if contents[i] != "" {
 			messageParts = append(messageParts, MessagePart{
-				CleanContent: contents[i],
+				Content: contents[i],
 			})
 		}
 	}

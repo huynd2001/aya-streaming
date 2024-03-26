@@ -1,0 +1,47 @@
+.message {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    font-size: 1em;
+}
+
+.author {
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+}
+
+.attachment {
+    font-size: 1em;
+}
+
+.emoji {
+    width: 2.5ex;
+    height: 2.5ex;
+    object-fit: contain;
+    object-position: center;
+}
+
+.attachmentContainer {
+    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+}
+
+.messageObject {
+    font-size: 1em;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.icon {
+    width: 20px;
+}

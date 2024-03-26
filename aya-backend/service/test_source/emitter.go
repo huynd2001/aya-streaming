@@ -22,18 +22,23 @@ func NewEmitter() *TestEmitter {
 		i := 0
 		for {
 			messageUpdates <- service.MessageUpdate{
-				Source: service.TestSource,
+
 				Update: service.New,
 				Message: service.Message{
-					Id: fmt.Sprintf("%d", i),
+					Source: service.TestSource,
+					Id:     fmt.Sprintf("%d", i),
 					Author: service.Author{
 						Username: "Gamers",
 						IsAdmin:  true,
 						IsBot:    false,
 						Color:    "",
 					},
-					Content:    []service.MessagePart{},
-					Attachment: []string{},
+					MessageParts: []service.MessagePart{
+						{
+							Content: "Hello from Server!",
+						},
+					},
+					Attachments: []string{},
 				},
 			}
 			time.Sleep(1 * time.Second * 15)
@@ -45,18 +50,18 @@ func NewEmitter() *TestEmitter {
 		i := 0
 		for {
 			messageUpdates <- service.MessageUpdate{
-				Source: service.TestSource,
 				Update: service.Delete,
 				Message: service.Message{
-					Id: fmt.Sprintf("%d", i),
+					Source: service.TestSource,
+					Id:     fmt.Sprintf("%d", i),
 					Author: service.Author{
 						Username: "Gamers",
 						IsAdmin:  true,
 						IsBot:    false,
 						Color:    "",
 					},
-					Content:    []service.MessagePart{},
-					Attachment: []string{},
+					MessageParts: []service.MessagePart{},
+					Attachments:  []string{},
 				},
 			}
 			time.Sleep(2 * time.Second * 30)

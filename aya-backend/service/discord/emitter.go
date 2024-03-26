@@ -55,17 +55,17 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 			}
 
 			messageUpdates <- service.MessageUpdate{
-				Source: service.Discord,
 				Update: service.New,
 				Message: service.Message{
-					Id: m.ID,
+					Source: service.Discord,
+					Id:     m.ID,
 					Author: service.Author{
 						Username: m.Author.Username,
 						IsAdmin:  (userPerm & dg.PermissionAdministrator) != 0,
 						IsBot:    user.Bot,
 						Color:    fmt.Sprintf("#%06x", color),
 					},
-					Content: discordMsgParser.ParseMessage(m.Message),
+					MessageParts: discordMsgParser.ParseMessage(m.Message),
 				},
 			}
 		}
@@ -76,7 +76,7 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 		return nil, err
 	}
 
-	fmt.Printf("New Discord Emitter created!")
+	fmt.Printf("New Discord Emitter created!\n")
 
 	return &DiscordEmitter{
 		DiscordClient: client,

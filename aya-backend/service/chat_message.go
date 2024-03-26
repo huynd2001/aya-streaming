@@ -1,5 +1,10 @@
 package service
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 type Source int
 
 const (
@@ -9,6 +14,50 @@ const (
 	TestSource
 )
 
+var (
+	sourceToStr = map[int]string{
+		0: "discord",
+		1: "twitch",
+		2: "youtube",
+		3: "test_source",
+	}
+
+	strToSource = map[string]int{
+		"discord":     0,
+		"twitch":      1,
+		"youtube":     2,
+		"test_source": 3,
+	}
+)
+
+func ParseSource(s string) (Source, error) {
+	value, ok := strToSource[s]
+	if !ok {
+		return Source(0), fmt.Errorf(`cannot detect "%s", not a valid source`, s)
+	}
+	return Source(value), nil
+}
+
+func (s Source) String() string {
+	return sourceToStr[int(s)]
+}
+
+func (s Source) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *Source) UnmarshalJSON(data []byte) error {
+	var source string
+	var err error
+	if err = json.Unmarshal(data, &source); err != nil {
+		return err
+	}
+	if *s, err = ParseSource(source); err != nil {
+		return err
+	}
+	return nil
+}
+
 type Update int
 
 const (
@@ -17,11 +66,54 @@ const (
 	Edit
 )
 
+var (
+	updateToStr = map[int]string{
+		0: "new",
+		1: "delete",
+		2: "edit",
+	}
+
+	strToUpdate = map[string]int{
+		"new":    0,
+		"delete": 1,
+		"edit":   2,
+	}
+)
+
+func ParseUpdate(s string) (Update, error) {
+	value, ok := strToUpdate[s]
+	if !ok {
+		return Update(-1), fmt.Errorf(`cannot detect "%s", not a valid source`, s)
+	}
+	return Update(value), nil
+}
+
+func (s Update) String() string {
+	return updateToStr[int(s)]
+}
+
+func (s Update) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+func (s *Update) UnmarshalJSON(data []byte) error {
+	var update string
+	var err error
+	if err = json.Unmarshal(data, &update); err != nil {
+		return err
+	}
+	if *s, err = ParseUpdate(update); err != nil {
+		return err
+	}
+	return nil
+}
+
 type Message struct {
-	Id         string        `json:"id"`
-	Author     Author        `json:"author"`
-	Content    []MessagePart `json:"content"`
-	Attachment []string      `json:"attachment"`
+	Source       Source        `json:"source"`
+	Id           string        `json:"id"`
+	Author       Author        `json:"author"`
+	MessageParts []MessagePart `json:"messageParts"`
+	Attachments  []string      `json:"attachments"`
 }
 
 type Emoji struct {
@@ -34,9 +126,9 @@ type Format struct {
 }
 
 type MessagePart struct {
-	CleanContent string `json:"cleanContent"`
-	Emoji        Emoji  `json:"emoji"`
-	Format       Format `json:"format"`
+	Content string `json:"content"`
+	Emoji   Emoji  `json:"emoji,omitempty"`
+	Format  Format `json:"format,omitempty"`
 }
 
 type Author struct {
@@ -47,7 +139,6 @@ type Author struct {
 }
 
 type MessageUpdate struct {
-	Source  Source  `json:"source"`
 	Update  Update  `json:"update"`
 	Message Message `json:"message"`
 }

@@ -7,8 +7,10 @@ import (
 	ws "github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
+	"unicode/utf8"
 )
 
 const (
@@ -62,6 +64,28 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func equalASCIIFold(s, t string) bool {
+	for s != "" && t != "" {
+		sr, size := utf8.DecodeRuneInString(s)
+		s = s[size:]
+		tr, size := utf8.DecodeRuneInString(t)
+		t = t[size:]
+		if sr == tr {
+			continue
+		}
+		if 'A' <= sr && sr <= 'Z' {
+			sr = sr + 'a' - 'A'
+		}
+		if 'A' <= tr && tr <= 'Z' {
+			tr = tr + 'a' - 'A'
+		}
+		if sr != tr {
+			return false
+		}
+	}
+	return s == t
+}
+
 func NewWSServer() (*WSServer, error) {
 
 	websiteOrigin := os.Getenv(WEBSITE_HOST_ORIGIN_ENV)
@@ -74,8 +98,21 @@ func NewWSServer() (*WSServer, error) {
 	// Check origin
 	// IDK why postman did not get caught by this, but anyway
 	upg.CheckOrigin = func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		return slices.Contains(acceptableOrigin, origin)
+		origin := r.Header["Origin"]
+		if len(origin) == 0 {
+			return true
+		}
+		u, err := url.Parse(origin[0])
+		if err != nil {
+			return false
+		}
+
+		fmt.Println(u.Host)
+
+		//return equalASCIIFold(u.Host, r.Host)
+		return slices.ContainsFunc(acceptableOrigin, func(acceptableHost string) bool {
+			return equalASCIIFold(u.Host, acceptableHost)
+		})
 	}
 
 	wsServer := WSServer{
