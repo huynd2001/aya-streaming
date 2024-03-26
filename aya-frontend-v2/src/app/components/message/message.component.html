@@ -1,0 +1,37 @@
+<div *ngIf="displayMsg" class="row message-object" [@push]="getState()">
+
+  <div class="col-4 author">
+    <i style="color: green" [class]="getIcon()"></i>
+    <span [style.color]="displayMsg.message.author.color"><b>{{displayMsg.message.author.username}}</b></span>
+  </div>
+
+  <div class="col-8">
+
+    <ng-container *ngIf="!displayMsg.delete">
+      <div class="attachment-container">
+        <ng-container class="attachment-container" *ngFor="let attachment of displayMsg.message.attachments">
+          <span class="attachment badge rounded-pill bg-secondary"><i class="bi bi-paperclip"></i>{{attachment}}</span>
+        </ng-container>
+      </div>
+
+      <div class="message">
+
+        <span *ngIf="displayMsg.edit"><i>(edited) </i></span>
+
+        <ng-container *ngFor="let msgPart of displayMsg.message.messageParts">
+
+          <span *ngIf="msgPart.format" [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
+          <img *ngIf="msgPart.emoji" [alt]="msgPart.emoji.alt" [ngSrc]="msgPart.emoji.id" class="emoji" fill/>
+          <span *ngIf="!msgPart.format">{{msgPart.content}}</span>
+        </ng-container>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="displayMsg.delete">
+      <div class="message">
+        <i>(deleted)</i>
+      </div>
+    </ng-container>
+
+  </div>
+</div>
