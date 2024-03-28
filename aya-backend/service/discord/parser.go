@@ -57,10 +57,9 @@ func getEmojiInfo(emojiStr string) Emoji {
 	alt := items[2]
 
 	if items[1] == "" {
-		id = fmt.Sprintf("https://cdn.discordapp.com/emojis/%s.gif?v=1", id)
-	} else {
 		id = fmt.Sprintf("https://cdn.discordapp.com/emojis/%s.png", id)
-
+	} else {
+		id = fmt.Sprintf("https://cdn.discordapp.com/emojis/%s.gif?v=1", id)
 	}
 
 	return Emoji{
@@ -83,13 +82,13 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 	case EmojiRegex:
 		emoji := getEmojiInfo(content)
 		return MessagePart{
-			Emoji: emoji,
+			Emoji: &emoji,
 		}
 	case ChannelRegex:
 		channelId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
 		defaultResult := MessagePart{
 			Content: "#unknown-channel",
-			Format: Format{
+			Format: &Format{
 				Color: "#ffffff",
 			},
 		}
@@ -100,7 +99,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 		}
 		return MessagePart{
 			Content: fmt.Sprintf("#%s", channel.Name),
-			Format: Format{
+			Format: &Format{
 				Color: "#ffffff",
 			},
 		}
@@ -108,7 +107,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 		userId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
 		defaultResult := MessagePart{
 			Content: "@unknown-user",
-			Format: Format{
+			Format: &Format{
 				Color: "#ffffff",
 			},
 		}
@@ -134,7 +133,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 
 		return MessagePart{
 			Content: fmt.Sprintf("@%s", username),
-			Format: Format{
+			Format: &Format{
 				Color: fmt.Sprintf("#%06x", color),
 			},
 		}
@@ -142,7 +141,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 		roleId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
 		defaultResult := MessagePart{
 			Content: "@unknown-role",
-			Format: Format{
+			Format: &Format{
 				Color: "#ffffff",
 			},
 		}
@@ -160,7 +159,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 		}
 		return MessagePart{
 			Content: fmt.Sprintf("@%s", guildRoles[idx].Name),
-			Format: Format{
+			Format: &Format{
 				Color: fmt.Sprintf("#%06x", guildRoles[idx].Color),
 			},
 		}
@@ -168,7 +167,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 	case Here:
 		return MessagePart{
 			Content: content,
-			Format: Format{
+			Format: &Format{
 				Color: "#ffffff",
 			},
 		}

@@ -22,7 +22,6 @@ import { NgForOf, NgIf, NgOptimizedImage } from '@angular/common';
         style({
           height: '0px',
           opacity: 0,
-          overflow: 'hidden',
         })
       ),
       state(
@@ -42,7 +41,6 @@ import { NgForOf, NgIf, NgOptimizedImage } from '@angular/common';
         style({
           height: '0px',
           opacity: 0,
-          overflow: 'hidden',
         })
       ),
       transition('init => loaded', [animate('0.3s')]),

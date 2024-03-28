@@ -1,11 +1,3 @@
-.channel {
-  position: absolute;
-  background-color: rgba(35, 39, 42, 0.7);
-  word-wrap: break-word;
-  z-index: 1;
-  font-size: xx-large;
-}
-
 .message-container {
   line-height: 1.5;
   font-size: 1.2em;
@@ -16,5 +8,7 @@
 .display {
   color: whitesmoke;
   background-color: #2C2F33;
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
 }

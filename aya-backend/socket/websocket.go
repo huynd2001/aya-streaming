@@ -46,8 +46,17 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	defer func(c *ws.Conn) {
 		_ = c.Close()
-		delete(wsServer.ChanMap, id)
 	}(c)
+
+	defaultCloseHandler := c.CloseHandler()
+
+	c.SetCloseHandler(func(code int, text string) error {
+		err := defaultCloseHandler(code, text)
+		if wsServer.ChanMap[id] != nil {
+			delete(wsServer.ChanMap, id)
+		}
+		return err
+	})
 
 	fmt.Println("Connection found!")
 

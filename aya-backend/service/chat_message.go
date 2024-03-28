@@ -126,9 +126,9 @@ type Format struct {
 }
 
 type MessagePart struct {
-	Content string `json:"content"`
-	Emoji   Emoji  `json:"emoji,omitempty"`
-	Format  Format `json:"format,omitempty"`
+	Content string  `json:"content"`
+	Emoji   *Emoji  `json:"emoji,omitempty"`
+	Format  *Format `json:"format,omitempty"`
 }
 
 type Author struct {

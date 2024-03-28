@@ -31,40 +31,38 @@ func NewEmitter() *TestEmitter {
 						Username: "Gamers",
 						IsAdmin:  true,
 						IsBot:    false,
-						Color:    "",
+						Color:    "#ffffff",
 					},
 					MessageParts: []service.MessagePart{
 						{
-							Content: "Hello from Server!",
+							Content: fmt.Sprintf("Bot#%d: Hello from server", i),
 						},
 					},
 					Attachments: []string{},
 				},
 			}
-			time.Sleep(1 * time.Second * 15)
-			i++
-		}
-	}()
 
-	go func() {
-		i := 0
-		for {
-			messageUpdates <- service.MessageUpdate{
-				Update: service.Delete,
-				Message: service.Message{
-					Source: service.TestSource,
-					Id:     fmt.Sprintf("%d", i),
-					Author: service.Author{
-						Username: "Gamers",
-						IsAdmin:  true,
-						IsBot:    false,
-						Color:    "",
+			go func() {
+				a := i
+				time.Sleep(1 * time.Second * 30)
+				messageUpdates <- service.MessageUpdate{
+					Update: service.Delete,
+					Message: service.Message{
+						Source: service.TestSource,
+						Id:     fmt.Sprintf("%d", a),
+						Author: service.Author{
+							Username: "Gamers",
+							IsAdmin:  true,
+							IsBot:    false,
+							Color:    "#ffffff",
+						},
+						MessageParts: []service.MessagePart{},
+						Attachments:  []string{},
 					},
-					MessageParts: []service.MessagePart{},
-					Attachments:  []string{},
-				},
-			}
-			time.Sleep(2 * time.Second * 30)
+				}
+			}()
+
+			time.Sleep(1 * time.Second * 10)
 			i++
 		}
 	}()

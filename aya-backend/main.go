@@ -1,8 +1,8 @@
 package main
 
 import (
+	"aya-backend/service"
 	discordsource "aya-backend/service/discord"
-	"aya-backend/service/test_source"
 	"aya-backend/socket"
 	"errors"
 	"fmt"
@@ -13,6 +13,13 @@ import (
 	"os/signal"
 	"syscall"
 )
+
+func sendMessage(chanMap map[string]*chan service.MessageUpdate, msg service.MessageUpdate) {
+	for key, value := range chanMap {
+		fmt.Printf("Sent message to channel %s\n", key)
+		*value <- msg
+	}
+}
 
 func main() {
 
@@ -27,7 +34,7 @@ func main() {
 
 	fmt.Println("Hello, world!")
 
-	testEmitter := test_source.NewEmitter()
+	//testEmitter := test_source.NewEmitter()
 
 	discordToken := os.Getenv("DISCORD_TOKEN")
 	discordEmitter, err := discordsource.NewEmitter(discordToken)
@@ -50,16 +57,14 @@ func main() {
 	go func() {
 		for {
 			select {
-			case testMsg := <-testEmitter.UpdateEmitter():
-				fmt.Println("Message from test source!")
-				fmt.Printf("%#v\n", testMsg)
-				for key, value := range wsServer.ChanMap {
-					fmt.Printf("Sent message to channel %s\n", key)
-					*value <- testMsg
-				}
+			//case testMsg := <-testEmitter.UpdateEmitter():
+			//	fmt.Println("Message from test source!")
+			//	fmt.Printf("%#v\n", testMsg)
+			//	sendMessage(wsServer.ChanMap, testMsg)
 			case discordMsg := <-discordEmitter.UpdateEmitter():
 				fmt.Println("Message from discord!")
 				fmt.Printf("%#v\n", discordMsg)
+				sendMessage(wsServer.ChanMap, discordMsg)
 			case _ = <-sc:
 				fmt.Println("End Server!")
 				if err := server.Close(); err != nil {

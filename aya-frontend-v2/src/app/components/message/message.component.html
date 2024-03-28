@@ -17,14 +17,13 @@
       <div class="message">
 
         <span *ngIf="displayMsg.edit"><i>(edited) </i></span>
-
         <ng-container *ngFor="let msgPart of displayMsg.message.messageParts">
-
           <span *ngIf="msgPart.format" [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
-          <img *ngIf="msgPart.emoji" [alt]="msgPart.emoji.alt" [ngSrc]="msgPart.emoji.id" class="emoji" fill/>
+          <img *ngIf="msgPart.emoji" [alt]="msgPart.emoji.alt" [src]="msgPart.emoji.id" class="emoji"/>
           <span *ngIf="!msgPart.format">{{msgPart.content}}</span>
         </ng-container>
       </div>
+
     </ng-container>
 
     <ng-container *ngIf="displayMsg.delete">
