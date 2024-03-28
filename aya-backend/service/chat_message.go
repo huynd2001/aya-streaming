@@ -117,12 +117,12 @@ type Message struct {
 }
 
 type Emoji struct {
-	Id  string `json:"id"`
-	Alt string `json:"alt"`
+	Id  string `json:"id,omitempty"`
+	Alt string `json:"alt,omitempty"`
 }
 
 type Format struct {
-	Color string `json:"color"`
+	Color string `json:"color,omitempty"`
 }
 
 type MessagePart struct {

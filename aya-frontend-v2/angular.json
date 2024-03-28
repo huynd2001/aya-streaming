@@ -28,7 +28,13 @@
           "defaultConfiguration": "production",
           "configurations": {
             "development": {
-              "mode": "development"
+              "mode": "development",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.development.ts"
+                }
+              ]
             },
             "production": {
               "sourcemap": false,

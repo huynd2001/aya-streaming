@@ -1,13 +1,14 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { NgForOf, NgIf } from '@angular/common';
 import { MessageComponent } from '../message/message.component';
 import { ChatWebsocketService } from '../../services/chat-websocket.service';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import {
   DisplayMessage,
   Message,
   MessageUpdate,
 } from '../../interfaces/message';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-chat-stream',
@@ -16,7 +17,7 @@ import {
   templateUrl: 'chat-stream.component.html',
   styleUrl: 'chat-stream.component.css',
 })
-export class ChatStreamComponent implements OnInit {
+export class ChatStreamComponent implements OnInit, OnDestroy {
   @Input() streamId: string = 'undefined';
 
   width: number = 400;
@@ -24,7 +25,7 @@ export class ChatStreamComponent implements OnInit {
   isConnected: boolean = false;
   maxMessages: number = 100;
   timeOut: number = 60000;
-  private chatObs: Observable<MessageUpdate> | undefined;
+  private chatSubscription: Subscription | undefined;
   displayMessages: DisplayMessage[] = [];
 
   getColor(r: number, g: number, b: number): string {
@@ -34,9 +35,9 @@ export class ChatStreamComponent implements OnInit {
   constructor(private chatWebsocketService: ChatWebsocketService) {}
 
   ngOnInit(): void {
-    let url = `ws://localhost:8000/stream/${this.streamId}`;
-    this.chatObs = this.chatWebsocketService.connect(url);
-    this.chatObs.subscribe({
+    let url = `${environment.wsSocketUrl}${this.streamId}`;
+    let chatObs = this.chatWebsocketService.connect(url);
+    this.chatSubscription = chatObs.subscribe({
       next: (messageUpdate: MessageUpdate) => {
         console.log(messageUpdate);
         this.updateMessage(messageUpdate.message, messageUpdate.update);
@@ -91,6 +92,12 @@ export class ChatStreamComponent implements OnInit {
           displayMsg.delete = true;
         }
       }
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.chatSubscription) {
+      this.chatSubscription.unsubscribe();
     }
   }
 }

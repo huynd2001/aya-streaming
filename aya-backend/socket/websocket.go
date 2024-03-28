@@ -38,7 +38,9 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	msgChannel := make(chan MessageUpdate)
 	if wsServer.ChanMap[id] != nil {
+		msgChan := wsServer.ChanMap[id]
 		delete(wsServer.ChanMap, id)
+		close(*msgChan)
 	}
 	wsServer.ChanMap[id] = &msgChannel
 
@@ -53,12 +55,13 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 		newMessage := <-msgChannel
 		newMessageStr, err := json.Marshal(newMessage)
 		if err != nil {
-			fmt.Printf("Error found: %s\n", err.Error())
+			fmt.Printf("Error found while marshal msg: %s\n", err.Error())
+			continue
 		}
 
 		err = c.WriteMessage(ws.TextMessage, newMessageStr)
 		if err != nil {
-			fmt.Println("write:", err)
+			fmt.Printf("Error counter while send msg:\n%s\n", err.Error())
 			break
 		}
 	}
@@ -96,12 +99,14 @@ func NewWSServer() (*WSServer, error) {
 	upg := ws.Upgrader{}
 
 	// Check origin
-	// IDK why postman did not get caught by this, but anyway
 	upg.CheckOrigin = func(r *http.Request) bool {
 		origin := r.Header["Origin"]
+
+		// this means that the ws call was from the same origin as the host
 		if len(origin) == 0 {
 			return true
 		}
+
 		u, err := url.Parse(origin[0])
 		if err != nil {
 			return false
@@ -109,7 +114,6 @@ func NewWSServer() (*WSServer, error) {
 
 		fmt.Println(u.Host)
 
-		//return equalASCIIFold(u.Host, r.Host)
 		return slices.ContainsFunc(acceptableOrigin, func(acceptableHost string) bool {
 			return equalASCIIFold(u.Host, acceptableHost)
 		})
