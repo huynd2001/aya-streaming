@@ -17,7 +17,7 @@
             "outputPath": "dist/client",
             "tsConfig": "tsconfig.app.json",
             "styles": [
-              "src/styles.css",
+              "src/styles.css"
             ],
             "scripts": [
               "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
@@ -45,7 +45,7 @@
           "defaultConfiguration": "development",
           "options": {
             "buildTarget": "my-app:build",
-            "port": 5173
+            "port": 3000
           },
           "configurations": {
             "development": {

@@ -35,7 +35,7 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
   constructor(private chatWebsocketService: ChatWebsocketService) {}
 
   ngOnInit(): void {
-    let url = `${environment.wsSocketUrl}${this.streamId}`;
+    let url = `${environment.wsSocketUrl}/stream/${this.streamId}`;
     let chatObs = this.chatWebsocketService.connect(url);
     this.isConnected = true;
     this.chatSubscription = chatObs.subscribe({
