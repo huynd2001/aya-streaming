@@ -12,7 +12,14 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     mainFields: ['module'],
   },
-  plugins: [analog({ ssr: false })],
+  plugins: [
+    analog({
+      ssr: false,
+      vite: {
+        inlineStylesExtension: 'scss',
+      },
+    }),
+  ],
   test: {
     globals: true,
     environment: 'jsdom',

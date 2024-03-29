@@ -6,6 +6,7 @@
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   font-size: 1em;
+  text-align: left;
 }
 
 .author {
