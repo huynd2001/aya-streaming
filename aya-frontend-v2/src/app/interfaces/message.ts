@@ -21,7 +21,7 @@ export interface MessagePart {
 }
 
 export interface MessageUpdate {
-  update: 'new' | 'update' | 'delete';
+  update: 'new' | 'edit' | 'delete';
   message: Message;
 }
 

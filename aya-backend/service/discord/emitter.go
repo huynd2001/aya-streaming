@@ -48,29 +48,43 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	client.AddHandler(func(s *dg.Session, m *dg.MessageCreate) {
 		if m.GuildID == guildId && m.ChannelID == channelId {
 
-			color := client.State.UserColor(m.Author.ID, m.ChannelID)
-
-			user, err := client.User(m.Author.ID)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			userPerm, err := client.State.UserChannelPermissions(m.Author.ID, m.ChannelID)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-
 			messageUpdates <- service.MessageUpdate{
 				Update: service.New,
 				Message: service.Message{
+					Source:       service.Discord,
+					Id:           m.ID,
+					Author:       discordMsgParser.ParseAuthor(m.Author, m.ChannelID),
+					MessageParts: discordMsgParser.ParseMessage(m.Message),
+					Attachments:  discordMsgParser.ParseAttachment(m.Message),
+				},
+			}
+		}
+	})
+
+	client.AddHandler(func(s *dg.Session, m *dg.MessageDelete) {
+		if m.GuildID == guildId && m.ChannelID == channelId {
+
+			messageUpdates <- service.MessageUpdate{
+				Update: service.Delete,
+				Message: service.Message{
 					Source: service.Discord,
 					Id:     m.ID,
-					Author: service.Author{
-						Username: m.Author.Username,
-						IsAdmin:  (userPerm & dg.PermissionAdministrator) != 0,
-						IsBot:    user.Bot,
-						Color:    fmt.Sprintf("#%06x", color),
-					},
+				},
+			}
+		}
+	})
+
+	client.AddHandler(func(s *dg.Session, m *dg.MessageUpdate) {
+		if m.GuildID == guildId && m.ChannelID == channelId {
+
+			messageUpdates <- service.MessageUpdate{
+				Update: service.Edit,
+				Message: service.Message{
+					Source:       service.Discord,
+					Id:           m.ID,
+					Author:       discordMsgParser.ParseAuthor(m.Author, m.ChannelID),
 					MessageParts: discordMsgParser.ParseMessage(m.Message),
+					Attachments:  discordMsgParser.ParseAttachment(m.Message),
 				},
 			}
 		}

@@ -96,6 +96,8 @@ func (s Update) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+type Attachment string
+
 func (s *Update) UnmarshalJSON(data []byte) error {
 	var update string
 	var err error
@@ -113,7 +115,7 @@ type Message struct {
 	Id           string        `json:"id"`
 	Author       Author        `json:"author"`
 	MessageParts []MessagePart `json:"messageParts"`
-	Attachments  []string      `json:"attachments"`
+	Attachments  []Attachment  `json:"attachments"`
 }
 
 type Emoji struct {

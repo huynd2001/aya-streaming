@@ -6,7 +6,9 @@ import (
 	dg "github.com/bwmarrin/discordgo"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -14,13 +16,15 @@ const (
 	CHANNEL_REGEX = `<#[0-9]+>`
 	MENTION_REGEX = `<@!?[0-9]+>`
 	ROLE_REGEX    = `<@&[0-9]+>`
-	EVERYONE      = "@everyone"
-	HERE          = "@here"
+	EVERYONE      = `@everyone`
+	HERE          = `@here`
+	TIME_REGEX    = `<t:[0-9]+:?[tTdDfFR]?>`
 
 	EMOJI_SPLIT_REGEX   = `<(a?)(:[A-z0-9_~]+:)([0-9]+)>`
 	CHANNEL_SPLIT_REGEX = `<#([0-9]+)>`
 	MENTION_SPLIT_REGEX = `<@!?([0-9]+)>`
 	ROLE_SPLIT_REGEX    = `<@&([0-9]+)>`
+	TIME_SPLIT_REGEX    = `<t:([0-9]+):?[tTdDfFR]?>`
 )
 
 type RegexIndex int
@@ -32,12 +36,12 @@ const (
 	RoleRegex
 	Everyone
 	Here
+	Time
 )
 
 var (
 	// Do not change this line since it corresponds to the upper defined "enums".
-	regexes       = []string{EMOJI_REGEX, CHANNEL_REGEX, MENTION_REGEX, ROLE_REGEX, EVERYONE, HERE}
-	splitRegexes  = []string{EMOJI_SPLIT_REGEX, CHANNEL_SPLIT_REGEX, MENTION_SPLIT_REGEX, ROLE_SPLIT_REGEX}
+	regexes       = []string{EMOJI_REGEX, CHANNEL_REGEX, MENTION_REGEX, ROLE_REGEX, EVERYONE, HERE, TIME_REGEX}
 	ultimateRegex = "(" + strings.Join(regexes, ")|(") + ")"
 )
 
@@ -69,6 +73,24 @@ func getEmojiInfo(emojiStr string) Emoji {
 
 }
 
+func getTimeStamp(timeStr string) string {
+	items := regexp.MustCompile(TIME_SPLIT_REGEX).FindStringSubmatch(timeStr)
+	if items == nil {
+		return ""
+	}
+
+	timeStampStr := items[1]
+	timeStampInt, err := strconv.ParseInt(timeStampStr, 10, 64)
+	if err != nil {
+		fmt.Printf("Cannot parse int! %s\n", err.Error())
+		return ""
+	}
+
+	timeStamp := time.Unix(timeStampInt, 0)
+	return timeStamp.UTC().Format(time.UnixDate)
+
+}
+
 func getIdWithRegex(content string, r *regexp.Regexp) string {
 	items := r.FindStringSubmatch(content)
 	if items == nil {
@@ -85,7 +107,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			Emoji: &emoji,
 		}
 	case ChannelRegex:
-		channelId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
+		channelId := getIdWithRegex(content, regexp.MustCompile(CHANNEL_SPLIT_REGEX))
 		defaultResult := MessagePart{
 			Content: "#unknown-channel",
 			Format: &Format{
@@ -104,7 +126,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			},
 		}
 	case MentionRegex:
-		userId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
+		userId := getIdWithRegex(content, regexp.MustCompile(MENTION_SPLIT_REGEX))
 		defaultResult := MessagePart{
 			Content: "@unknown-user",
 			Format: &Format{
@@ -138,7 +160,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			},
 		}
 	case RoleRegex:
-		roleId := getIdWithRegex(content, regexp.MustCompile(splitRegexes[matchedRegex]))
+		roleId := getIdWithRegex(content, regexp.MustCompile(ROLE_SPLIT_REGEX))
 		defaultResult := MessagePart{
 			Content: "@unknown-role",
 			Format: &Format{
@@ -177,6 +199,13 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 				Color: "#ffffff",
 			},
 		}
+	case Time:
+		return MessagePart{
+			Content: getTimeStamp(content),
+			Format: &Format{
+				Color: "#ffffff",
+			},
+		}
 	default:
 		// Should not be here
 	}
@@ -191,6 +220,14 @@ func NewParser(client *dg.Session) DiscordMessageParser {
 		client,
 		compiledUltRegex,
 	}
+}
+
+func (parse *DiscordMessageParser) ParseAttachment(message *dg.Message) []Attachment {
+	var attachments []Attachment
+	for _, msgAttachment := range message.Attachments {
+		attachments = append(attachments, Attachment(msgAttachment.Filename))
+	}
+	return attachments
 }
 
 func (parser *DiscordMessageParser) ParseMessage(message *dg.Message) []MessagePart {
@@ -220,4 +257,25 @@ func (parser *DiscordMessageParser) ParseMessage(message *dg.Message) []MessageP
 		}
 	}
 	return messageParts
+}
+
+func (parser *DiscordMessageParser) ParseAuthor(author *dg.User, channelId string) Author {
+
+	color := parser.client.State.UserColor(author.ID, channelId)
+
+	user, err := parser.client.User(author.ID)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	userPerm, err := parser.client.State.UserChannelPermissions(author.ID, channelId)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	return Author{
+		Username: author.Username,
+		IsAdmin:  (userPerm & dg.PermissionAdministrator) != 0,
+		IsBot:    user.Bot,
+		Color:    fmt.Sprintf("#%06x", color),
+	}
 }

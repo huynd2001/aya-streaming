@@ -47,7 +47,7 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
     });
   }
 
-  updateMessage(msg: Message, update: 'new' | 'delete' | 'update') {
+  updateMessage(msg: Message, update: 'new' | 'delete' | 'edit') {
     switch (update) {
       case 'new': {
         let displayMsg: DisplayMessage = {
@@ -75,7 +75,7 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
           });
         break;
       }
-      case 'update': {
+      case 'edit': {
         let displayMsg = this.displayMessages.find(
           (dMsg) => dMsg.message.id == msg.id
         );
@@ -92,6 +92,7 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
         if (displayMsg) {
           displayMsg.delete = true;
         }
+        break;
       }
     }
   }
