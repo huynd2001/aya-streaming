@@ -164,6 +164,12 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			},
 		}
 	case Everyone:
+		return MessagePart{
+			Content: content,
+			Format: &Format{
+				Color: "#ffffff",
+			},
+		}
 	case Here:
 		return MessagePart{
 			Content: content,
@@ -172,6 +178,7 @@ func (parser *DiscordMessageParser) parsingColoredContent(message *dg.Message, c
 			},
 		}
 	default:
+		// Should not be here
 	}
 	return MessagePart{}
 }

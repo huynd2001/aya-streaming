@@ -7,11 +7,17 @@ import (
 )
 
 type TestEmitter struct {
+	service.ChatEmitter
 	updateEmitter chan service.MessageUpdate
 }
 
 func (testEmitter *TestEmitter) UpdateEmitter() chan service.MessageUpdate {
 	return testEmitter.updateEmitter
+}
+
+func (testEmitter *TestEmitter) CloseEmitter() error {
+	// TODO: work on something?
+	return nil
 }
 
 func NewEmitter() *TestEmitter {

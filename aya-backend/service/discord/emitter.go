@@ -8,12 +8,17 @@ import (
 )
 
 type DiscordEmitter struct {
+	service.ChatEmitter
 	updateEmitter chan service.MessageUpdate
-	DiscordClient *dg.Session
+	discordClient *dg.Session
 }
 
 func (discordEmitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate {
 	return discordEmitter.updateEmitter
+}
+
+func (discordEmitter *DiscordEmitter) CloseEmitter() error {
+	return discordEmitter.discordClient.Close()
 }
 
 func NewEmitter(token string) (*DiscordEmitter, error) {
@@ -79,7 +84,7 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	fmt.Printf("New Discord Emitter created!\n")
 
 	return &DiscordEmitter{
-		DiscordClient: client,
+		discordClient: client,
 		updateEmitter: messageUpdates,
 	}, nil
 }
