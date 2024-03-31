@@ -222,7 +222,7 @@ func NewParser(client *dg.Session) DiscordMessageParser {
 	}
 }
 
-func (parse *DiscordMessageParser) ParseAttachment(message *dg.Message) []Attachment {
+func (parser *DiscordMessageParser) ParseAttachment(message *dg.Message) []Attachment {
 	var attachments []Attachment
 	for _, msgAttachment := range message.Attachments {
 		attachments = append(attachments, Attachment(msgAttachment.Filename))

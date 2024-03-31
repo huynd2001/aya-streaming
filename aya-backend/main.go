@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	DISCORD_TOKEN_ENV = "DISCORD_TOKEN"
-	SOURCES_ENV       = "SOURCES"
+	YOUTUBE_API_KEY_ENV = "YOUTUBE_API_KEY"
+	DISCORD_TOKEN_ENV   = "DISCORD_TOKEN"
+	SOURCES_ENV         = "SOURCES"
 )
 
 func sendMessage(chanMap map[string]*chan MessageUpdate, msg MessageUpdate) {

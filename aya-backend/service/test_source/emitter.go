@@ -1,17 +1,17 @@
 package test_source
 
 import (
-	"aya-backend/service"
+	. "aya-backend/service"
 	"fmt"
 	"time"
 )
 
 type TestEmitter struct {
-	service.ChatEmitter
-	updateEmitter chan service.MessageUpdate
+	ChatEmitter
+	updateEmitter chan MessageUpdate
 }
 
-func (testEmitter *TestEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (testEmitter *TestEmitter) UpdateEmitter() chan MessageUpdate {
 	return testEmitter.updateEmitter
 }
 
@@ -22,48 +22,48 @@ func (testEmitter *TestEmitter) CloseEmitter() error {
 
 func NewEmitter() *TestEmitter {
 
-	messageUpdates := make(chan service.MessageUpdate)
+	messageUpdates := make(chan MessageUpdate)
 
 	go func() {
 		i := 0
 		for {
-			messageUpdates <- service.MessageUpdate{
+			messageUpdates <- MessageUpdate{
 
-				Update: service.New,
-				Message: service.Message{
-					Source: service.TestSource,
+				Update: New,
+				Message: Message{
+					Source: TestSource,
 					Id:     fmt.Sprintf("%d", i),
-					Author: service.Author{
+					Author: Author{
 						Username: "Gamers",
 						IsAdmin:  true,
 						IsBot:    false,
 						Color:    "#ffffff",
 					},
-					MessageParts: []service.MessagePart{
+					MessageParts: []MessagePart{
 						{
 							Content: fmt.Sprintf("Bot#%d: Hello from server", i),
 						},
 					},
-					Attachments: []string{},
+					Attachments: []Attachment{},
 				},
 			}
 
 			go func() {
 				a := i
 				time.Sleep(1 * time.Second * 30)
-				messageUpdates <- service.MessageUpdate{
-					Update: service.Delete,
-					Message: service.Message{
-						Source: service.TestSource,
+				messageUpdates <- MessageUpdate{
+					Update: Delete,
+					Message: Message{
+						Source: TestSource,
 						Id:     fmt.Sprintf("%d", a),
-						Author: service.Author{
+						Author: Author{
 							Username: "Gamers",
 							IsAdmin:  true,
 							IsBot:    false,
 							Color:    "#ffffff",
 						},
-						MessageParts: []service.MessagePart{},
-						Attachments:  []string{},
+						MessageParts: []MessagePart{},
+						Attachments:  []Attachment{},
 					},
 				}
 			}()
