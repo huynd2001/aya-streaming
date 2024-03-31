@@ -11,6 +11,7 @@ import (
 )
 
 type YoutubeEmitterConfig struct {
+	// TODO: Handling OAuth2.0 code flow
 	ApiKey string
 }
 
@@ -42,7 +43,7 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 		return nil, err
 	}
 
-	// TODO: work with database to retrieve the guild id for system
+	// TODO: work with database to retrieve the Youtube URL
 
 	videoId := os.Getenv("TEST_YT_URL")
 	if videoId == "" {
