@@ -7,7 +7,7 @@
 
   <div class="col-8">
 
-    <ng-container *ngIf="!displayMsg.delete">
+    @if (!displayMsg.delete) {
       <div class="attachment-container">
         <ng-container class="attachment-container" *ngFor="let attachment of displayMsg.message.attachments">
           <span class="attachment badge rounded-pill bg-secondary"><i class="bi bi-paperclip"></i>{{attachment}}</span>
@@ -15,22 +15,31 @@
       </div>
 
       <div class="message">
+        @if (displayMsg.edit) {
+          <span><i>(edited) </i></span>
+        }
 
-        <span *ngIf="displayMsg.edit"><i>(edited) </i></span>
-        <ng-container *ngFor="let msgPart of displayMsg.message.messageParts">
-          <span *ngIf="msgPart.format" [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
-          <img *ngIf="msgPart.emoji" [alt]="msgPart.emoji.alt" [src]="msgPart.emoji.id" class="emoji"/>
-          <span *ngIf="!msgPart.format">{{msgPart.content}}</span>
-        </ng-container>
+        @for (msgPart of displayMsg.message.messageParts; track $index) {
+
+          @if (msgPart.format) {
+            <span [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
+          }
+          @else {
+            <span>{{msgPart.content}}</span>
+          }
+
+          @if (msgPart.emoji) {
+            <img [alt]="msgPart.emoji.alt" [src]="msgPart.emoji.id" class="message-emoji"/>
+          }
+
+        }
       </div>
-
-    </ng-container>
-
-    <ng-container *ngIf="displayMsg.delete">
+    }
+    @else {
       <div class="message">
         <i>(deleted)</i>
       </div>
-    </ng-container>
+    }
 
   </div>
 </div>

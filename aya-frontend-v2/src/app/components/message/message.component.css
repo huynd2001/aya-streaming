@@ -21,7 +21,7 @@
   font-size: 1em;
 }
 
-.emoji {
+.message-emoji {
   width : 2.5ex;
   height : 2.5ex;
   object-fit: contain;

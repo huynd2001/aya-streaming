@@ -2,17 +2,17 @@
      [style.width.px]="width" [style.height.px]="height"
      [style.max-width.px]="width" [style.max-height.px]="height"
      [style.background-color]="getColor(44, 47, 51)">
-  <div *ngIf="!isConnected"
-       [style.width.px]="width" [style.height.px]="height"
-       [style.max-width.px]="width" [style.max-height.px]="height"
-       class="d-flex justify-content-center align-items-center">
-    <div class="spinner-grow text-info" role="status">
+  @if (!isConnected) {
+    <div [style.width.px]="width" [style.height.px]="height"
+      [style.max-width.px]="width" [style.max-height.px]="height"
+      class="d-flex justify-content-center align-items-center">
+      <div class="spinner-grow text-info" role="status">
+      </div>
     </div>
-  </div>
+  }
   <div class="container message-container">
-    <div *ngFor="let dMsg of displayMessages">
-      <app-message [displayMsg]="dMsg"></app-message>
-    </div>
+    @for (displayMsg of displayMessages; track $index) {
+      <app-message [displayMsg]="displayMsg"></app-message>
+    }
   </div>
-
 </div>
