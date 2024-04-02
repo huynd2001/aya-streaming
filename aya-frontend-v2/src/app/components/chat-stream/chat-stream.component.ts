@@ -18,7 +18,7 @@ import { environment } from '../../../environments/environment';
   styleUrl: 'chat-stream.component.css',
 })
 export class ChatStreamComponent implements OnInit, OnDestroy {
-  @Input() streamId: string = 'undefined';
+  @Input() streamId: string | undefined;
 
   width: number = 400;
   height: number = 600;
@@ -35,6 +35,9 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
   constructor(private chatWebsocketService: ChatWebsocketService) {}
 
   ngOnInit(): void {
+    if (!this.streamId) {
+      return;
+    }
     let url = `${environment.wsSocketUrl}/stream/${this.streamId}`;
     let chatObs = this.chatWebsocketService.connect(url);
     this.isConnected = true;

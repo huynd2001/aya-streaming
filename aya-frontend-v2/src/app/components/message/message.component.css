@@ -18,12 +18,12 @@
 }
 
 .attachment {
-  font-size: 1em;
+  font-size: 0.5em;
 }
 
 .message-emoji {
-  width : 2.5ex;
-  height : 2.5ex;
+  width : 1.5em;
+  height : 1.5em;
   object-fit: contain;
   object-position: center;
 }
@@ -37,5 +37,9 @@
 }
 
 .message-object {
-  font-size: 1em;
+  font-size: 12pt;
+}
+
+.message-source {
+
 }

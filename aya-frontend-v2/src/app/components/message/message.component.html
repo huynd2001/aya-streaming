@@ -1,45 +1,49 @@
-<div *ngIf="displayMsg" class="row message-object" [@push]="getState()">
+@if (displayMsg) {
+  <div class="row message-object" [@push]="getState()">
 
-  <div class="col-4 author">
-    <i style="color: green" [class]="getIcon()"></i>
-    <span [style.color]="displayMsg.message.author.color"><b>{{displayMsg.message.author.username}}</b></span>
+    <div class="col-4 author">
+      <i style="color: silver" [class]="getIcon()"></i>
+      <span [style.color]="displayMsg.message.author.color"><b>{{displayMsg.message.author.username}}</b></span>
+    </div>
+
+    <div class="col-8">
+      @if (!displayMsg.delete) {
+
+
+        <div class="message">
+          @if (displayMsg.edit) {
+            <span><i>(edited) </i></span>
+          }
+
+          @for (msgPart of displayMsg.message.messageParts; track $index) {
+
+            @if (msgPart.format) {
+              <span [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
+            }
+            @else {
+              <span>{{msgPart.content}}</span>
+            }
+
+            @if (msgPart.emoji) {
+              <img [alt]="msgPart.emoji.alt" [src]="msgPart.emoji.id" class="message-emoji"/>
+            }
+
+          }
+        </div>
+        <div class="attachment-container">
+          @for (attachment of displayMsg.message.attachments; track $index) {
+            <span class="attachment badge rounded-pill bg-secondary"><i class="bi bi-paperclip"></i>{{attachment}}</span>
+          }
+        </div>
+      }
+      @else {
+        <div class="message">
+          <i>(deleted)</i>
+        </div>
+      }
+
+    </div>
   </div>
+} @else {
 
-  <div class="col-8">
-
-    @if (!displayMsg.delete) {
-      <div class="attachment-container">
-        <ng-container class="attachment-container" *ngFor="let attachment of displayMsg.message.attachments">
-          <span class="attachment badge rounded-pill bg-secondary"><i class="bi bi-paperclip"></i>{{attachment}}</span>
-        </ng-container>
-      </div>
-
-      <div class="message">
-        @if (displayMsg.edit) {
-          <span><i>(edited) </i></span>
-        }
-
-        @for (msgPart of displayMsg.message.messageParts; track $index) {
-
-          @if (msgPart.format) {
-            <span [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
-          }
-          @else {
-            <span>{{msgPart.content}}</span>
-          }
-
-          @if (msgPart.emoji) {
-            <img [alt]="msgPart.emoji.alt" [src]="msgPart.emoji.id" class="message-emoji"/>
-          }
-
-        }
-      </div>
-    }
-    @else {
-      <div class="message">
-        <i>(deleted)</i>
-      </div>
-    }
-
-  </div>
-</div>
+}
