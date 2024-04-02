@@ -27,6 +27,7 @@ export default class HomePage implements OnInit {
   public isAuth: boolean = false;
   private readonly oidcSecurityService = inject(OidcSecurityService);
   ngOnInit(): void {
+    console.log('huh');
     this.oidcSecurityService
       .checkAuth()
       .subscribe(({ isAuthenticated, userData }) => {
