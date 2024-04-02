@@ -4,10 +4,28 @@
     <button mat-icon-button class="example-icon" aria-label="Example icon-button with menu icon">
       <mat-icon>menu</mat-icon>
     </button>
-    <span>Aya~</span>
+    <span>Aya</span>
     <span class="example-spacer"></span>
-    <button mat-icon-button class="example-icon favorite-icon" aria-label="Example icon-button with heart icon">
+    <button mat-icon-button [matMenuTriggerFor]="loginMenu" class="example-icon favorite-icon" aria-label="Example icon-button with heart icon">
       <mat-icon>more_vert</mat-icon>
     </button>
+    <mat-menu #loginMenu="matMenu">
+
+      <mat-list>
+        @if (isAuth) {
+          <mat-list-item>
+            <span>Logged in!</span>
+          </mat-list-item>
+          <mat-list-item>
+            <button (click)="logout()" mat-button>Log out</button>
+          </mat-list-item>
+        } @else {
+          <mat-list-item>
+            <button (click)="login()" mat-button>Log in</button>
+          </mat-list-item>
+        }
+
+      </mat-list>
+    </mat-menu>
   </mat-toolbar>
 </div>
