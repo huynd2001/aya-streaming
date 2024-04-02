@@ -41,5 +41,12 @@
 }
 
 .message-source {
+  width: 1.5em;
+}
 
+.message-source-svg {
+  width: 1.5em;
+  height: 1.5em;
+  object-fit: contain;
+  object-position: center;
 }

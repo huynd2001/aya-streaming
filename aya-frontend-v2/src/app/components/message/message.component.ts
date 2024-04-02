@@ -55,13 +55,26 @@ export class MessageComponent implements OnInit {
     // IDK why but I put this in my legacy code
   }
 
-  getIcon() {
+  getIcon(): string {
     return this.displayMsg?.message.author.isBot ||
       this.displayMsg?.message.author.isAdmin
       ? this.displayMsg.message.author.isBot
         ? 'bi bi-gear'
         : 'bi bi-shield-fill-check'
       : '';
+  }
+
+  getSource(): string {
+    switch (this.displayMsg?.message.source) {
+      case 'discord':
+        return '/discord.svg';
+      case 'youtube':
+        return '/youtube.svg';
+      case 'twitch':
+        return '/twitch.svg';
+      default:
+        return '/analog.svg';
+    }
   }
 
   getState(): string {

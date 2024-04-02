@@ -1,12 +1,16 @@
 @if (displayMsg) {
   <div class="row message-object" [@push]="getState()">
 
-    <div class="col-4 author">
-      <i style="color: silver" [class]="getIcon()"></i>
-      <span [style.color]="displayMsg.message.author.color"><b>{{displayMsg.message.author.username}}</b></span>
+    <div class="col-1 message-source">
+      <img [alt]="displayMsg.message.source" [src]="getSource()" class="message-source-svg">
     </div>
 
-    <div class="col-8">
+    <div class="col-4 author">
+      <i style="color: silver" [class]="getIcon()"></i>
+      <span [style.color]="displayMsg.message.author.color"><b> {{displayMsg.message.author.username}}</b></span>
+    </div>
+
+    <div class="col-7">
       @if (!displayMsg.delete) {
 
 
