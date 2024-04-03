@@ -1,8 +1,8 @@
-package main
+package server
 
 import (
-	. "aya-backend/service"
-	"aya-backend/socket"
+	. "aya-backend/server/service"
+	"aya-backend/server/socket"
 	"errors"
 	"fmt"
 	"github.com/joho/godotenv"

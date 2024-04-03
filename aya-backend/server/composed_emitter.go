@@ -1,10 +1,10 @@
-package main
+package server
 
 import (
-	. "aya-backend/service"
-	discordsource "aya-backend/service/discord"
-	"aya-backend/service/test_source"
-	youtube_source "aya-backend/service/youtube"
+	. "aya-backend/server/service"
+	discordsource "aya-backend/server/service/discord"
+	"aya-backend/server/service/test_source"
+	youtubesource "aya-backend/server/service/youtube"
 	"errors"
 	"fmt"
 	"os"
@@ -15,7 +15,7 @@ type MessagesChannel struct {
 	ChatEmitter
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
-	youtubeEmitter *youtube_source.YoutubeEmitter
+	youtubeEmitter *youtubesource.YoutubeEmitter
 }
 
 type MessageChannelConfig struct {
@@ -112,10 +112,10 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 
 	if settings.Youtube {
 		ytApiKey := os.Getenv(YOUTUBE_API_KEY_ENV)
-		ytEmitterConfig := youtube_source.YoutubeEmitterConfig{
+		ytEmitterConfig := youtubesource.YoutubeEmitterConfig{
 			ApiKey: ytApiKey,
 		}
-		youtubeEmitter, err := youtube_source.NewEmitter(&ytEmitterConfig)
+		youtubeEmitter, err := youtubesource.NewEmitter(&ytEmitterConfig)
 		if err != nil {
 			fmt.Printf("Error during creating a youtube emitter: %s\n", err.Error())
 		}

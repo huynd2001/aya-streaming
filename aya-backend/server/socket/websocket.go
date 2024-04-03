@@ -1,7 +1,7 @@
 package socket
 
 import (
-	. "aya-backend/service"
+	. "aya-backend/server/service"
 	"encoding/json"
 	"fmt"
 	ws "github.com/gorilla/websocket"
