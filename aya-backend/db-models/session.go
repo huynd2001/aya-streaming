@@ -1,4 +1,4 @@
-package main
+package db_models
 
 import (
 	"gorm.io/gorm"

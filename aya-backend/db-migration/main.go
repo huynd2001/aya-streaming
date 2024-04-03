@@ -1,6 +1,7 @@
 package main
 
 import (
+	model "aya-backend/db-models"
 	"errors"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -64,7 +65,7 @@ func main() {
 		return
 	}
 
-	var session Session
+	var session model.Session
 	err = db.AutoMigrate(&session)
 	if err != nil {
 		fmt.Printf("Error when migrating the interface Session: %s\n", err.Error())
