@@ -2,7 +2,7 @@ import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { NgForOf, NgIf } from '@angular/common';
 import { MessageComponent } from '../message/message.component';
 import { ChatWebsocketService } from '../../services/chat-websocket.service';
-import { Observable, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import {
   DisplayMessage,
   Message,

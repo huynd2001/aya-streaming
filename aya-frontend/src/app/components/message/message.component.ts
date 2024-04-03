@@ -73,7 +73,7 @@ export class MessageComponent implements OnInit {
       case 'twitch':
         return '/twitch.svg';
       default:
-        return '/analog.svg';
+        return '/aya.svg';
     }
   }
 
