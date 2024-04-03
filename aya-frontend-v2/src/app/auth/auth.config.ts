@@ -8,10 +8,12 @@ export const authConfig: PassedInitialConfig = {
     redirectUrl: environment.redirectUrl,
     postLogoutRedirectUri: environment.redirectUrl,
     clientId: environment.clientId,
-    scope: 'openid profile email', // 'openid profile offline_access ' + your scopes
+    scope: 'openid profile email offline_access', // 'openid profile offline_access ' + your scopes
     responseType: 'code',
     silentRenew: true,
     useRefreshToken: true,
+    ignoreNonceAfterRefresh: true,
+    triggerRefreshWhenIdTokenExpired: false,
     renewTimeBeforeTokenExpiresInSeconds: 30,
   },
 };
