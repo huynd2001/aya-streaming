@@ -4,6 +4,7 @@ import (
 	. "aya-backend/server/service"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	ws "github.com/gorilla/websocket"
 	"log"
 	"net/http"
@@ -98,7 +99,7 @@ func equalASCIIFold(s, t string) bool {
 	return s == t
 }
 
-func NewWSServer() (*WSServer, error) {
+func NewWSServer(s *mux.Router) (*WSServer, error) {
 
 	websiteOrigin := os.Getenv(WEBSITE_HOST_ORIGIN_ENV)
 	if websiteOrigin != "" {
@@ -133,7 +134,7 @@ func NewWSServer() (*WSServer, error) {
 		ChanMap: make(map[string]*chan MessageUpdate),
 	}
 
-	http.HandleFunc("/stream/{id}", func(w http.ResponseWriter, r *http.Request) {
+	s.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
 		handleWSConn(&wsServer, w, r)
 	})
 

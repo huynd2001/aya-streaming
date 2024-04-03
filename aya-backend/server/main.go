@@ -1,22 +1,22 @@
-package server
+package main
 
 import (
 	. "aya-backend/server/service"
 	"aya-backend/server/socket"
 	"errors"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
 const (
-	YOUTUBE_API_KEY_ENV = "YOUTUBE_API_KEY"
-	DISCORD_TOKEN_ENV   = "DISCORD_TOKEN"
-	SOURCES_ENV         = "SOURCES"
+	SOURCES_ENV = "SOURCES"
 )
 
 func sendMessage(chanMap map[string]*chan MessageUpdate, msg MessageUpdate) {
@@ -24,6 +24,28 @@ func sendMessage(chanMap map[string]*chan MessageUpdate, msg MessageUpdate) {
 		fmt.Printf("Sent message to channel %s\n", key)
 		*value <- msg
 	}
+}
+
+func parseConfig(msgSettingStr string) *MessageChannelConfig {
+
+	config := MessageChannelConfig{
+		Test:    false,
+		Discord: false,
+		Youtube: false,
+	}
+	enabledSources := strings.Split(msgSettingStr, " ")
+	for _, enabledSource := range enabledSources {
+		switch enabledSource {
+		case "test_source":
+			config.Test = true
+		case "discord":
+			config.Discord = true
+		case "youtube":
+			config.Youtube = true
+		}
+
+	}
+	return &config
 }
 
 func main() {
@@ -49,11 +71,15 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
-	wsServer, err := socket.NewWSServer()
+	r := mux.NewRouter()
+	streamRouter := r.PathPrefix("/stream").Subrouter()
+
+	wsServer, err := socket.NewWSServer(streamRouter)
 	if err != nil {
-		fmt.Printf("Error during create a web socker: %s\n", err.Error())
+		fmt.Printf("Error during create the websocket server: %s\n", err.Error())
 	}
 
+	http.Handle("/", r)
 	fmt.Println("Ready to send messages through web sockets!")
 
 	go func() {

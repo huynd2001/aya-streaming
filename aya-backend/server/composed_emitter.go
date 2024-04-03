@@ -1,18 +1,22 @@
-package server
+package main
 
 import (
-	. "aya-backend/server/service"
+	"aya-backend/server/service"
 	discordsource "aya-backend/server/service/discord"
 	"aya-backend/server/service/test_source"
 	youtubesource "aya-backend/server/service/youtube"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
+)
+
+const (
+	YOUTUBE_API_KEY_ENV = "YOUTUBE_API_KEY"
+	DISCORD_TOKEN_ENV   = "DISCORD_TOKEN"
 )
 
 type MessagesChannel struct {
-	ChatEmitter
+	service.ChatEmitter
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
@@ -24,8 +28,8 @@ type MessageChannelConfig struct {
 	Youtube bool
 }
 
-func (messageChannel MessagesChannel) UpdateEmitter() chan MessageUpdate {
-	msgC := make(chan MessageUpdate)
+func (messageChannel MessagesChannel) UpdateEmitter() chan service.MessageUpdate {
+	msgC := make(chan service.MessageUpdate)
 
 	if messageChannel.testEmitter != nil {
 		go func() {
@@ -123,26 +127,4 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 	}
 
 	return &msgChannel
-}
-
-func parseConfig(msgSettingStr string) *MessageChannelConfig {
-
-	config := MessageChannelConfig{
-		Test:    false,
-		Discord: false,
-		Youtube: false,
-	}
-	enabledSources := strings.Split(msgSettingStr, " ")
-	for _, enabledSource := range enabledSources {
-		switch enabledSource {
-		case "test_source":
-			config.Test = true
-		case "discord":
-			config.Discord = true
-		case "youtube":
-			config.Youtube = true
-		}
-
-	}
-	return &config
 }
