@@ -65,7 +65,7 @@ func main() {
 		return
 	}
 
-	var session model.Session
+	var session model.GORMSession
 	err = db.AutoMigrate(&session)
 	if err != nil {
 		fmt.Printf("Error when migrating the interface Session: %s\n", err.Error())

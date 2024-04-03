@@ -5,18 +5,7 @@ import (
 	"time"
 )
 
-type Discord struct {
-	guildId   string
-	channelId string
-}
-
-type Twitch struct {
-}
-
-type Youtube struct {
-}
-
-type Session struct {
+type GORMSession struct {
 	gorm.Model
 	Id         uint `gorm:"primaryKey"`
 	Discord    string
@@ -24,6 +13,28 @@ type Session struct {
 	Youtube    string
 	CreateTime time.Time
 	UpdateTime time.Time
-	isOn       bool
-	isDelete   bool
+	IsOn       bool
+	IsDelete   bool
+}
+
+type Session struct {
+	Id         uint      `json:"id"`
+	Discord    *Discord  `json:"discord,omitempty"`
+	Twitch     *Twitch   `json:"twitch,omitempty"`
+	Youtube    *Youtube  `json:"youtube,omitempty"`
+	CreateTime time.Time `json:"createTime"`
+	UpdateTime time.Time `json:"UpdateTime"`
+	IsOn       bool      `json:"isOn"`
+	IsDelete   bool      `json:"isDelete"`
+}
+
+type Discord struct {
+	GuildId   string `json:"guildId,omitempty"`
+	ChannelId string `json:"channelId,omitempty"`
+}
+
+type Twitch struct {
+}
+
+type Youtube struct {
 }

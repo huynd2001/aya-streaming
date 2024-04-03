@@ -1,6 +1,7 @@
 package main
 
 import (
+	"aya-backend/server/api"
 	. "aya-backend/server/service"
 	"aya-backend/server/socket"
 	"errors"
@@ -78,6 +79,9 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error during create the websocket server: %s\n", err.Error())
 	}
+
+	apiRouter := r.PathPrefix("/api").Subrouter()
+	api.NewApiServer(apiRouter)
 
 	http.Handle("/", r)
 	fmt.Println("Ready to send messages through web sockets!")
