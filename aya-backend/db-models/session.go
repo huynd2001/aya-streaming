@@ -18,11 +18,12 @@ type Youtube struct {
 
 type Session struct {
 	gorm.Model
-	Id         string
+	Id         uint `gorm:"primaryKey"`
 	Discord    string
 	Twitch     string
 	Youtube    string
 	CreateTime time.Time
 	UpdateTime time.Time
-	EndTime    time.Time
+	isOn       bool
+	isDelete   bool
 }
