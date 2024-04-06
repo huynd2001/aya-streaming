@@ -45,10 +45,26 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 
 	// TODO: work with database to retrieve the Youtube URL
 
-	videoId := os.Getenv("TEST_YT_URL")
-	if videoId == "" {
-		return nil, fmt.Errorf("no Youtube Link specified")
+	channelId := os.Getenv("TEST_YT_CHANNEL_ID")
+	if channelId == "" {
+		return nil, fmt.Errorf("env variable TEST_UT_CHANNEL_ID not found")
 	}
+
+	searchRes, err := ytService.Search.
+		List([]string{"id"}).
+		ChannelId(channelId).
+		EventType("live").
+		Type("video").
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(searchRes.Items) == 0 {
+		return nil, fmt.Errorf("no live videos found for channel %s", channelId)
+	}
+
+	videoId := searchRes.Items[0].Id.VideoId
 
 	videoService := yt.NewVideosService(ytService)
 
