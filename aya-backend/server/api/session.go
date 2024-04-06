@@ -31,7 +31,7 @@ type SessionFilter struct {
 }
 
 type Content struct {
-	Data any    `json:"data"`
+	Data any    `json:"data,omitempty"`
 	Err  string `json:"err,omitempty"`
 }
 
