@@ -17,7 +17,7 @@ type GORMSession struct {
 	IsOn     bool
 	IsDelete bool
 	OwnerID  uint
-	User     User `gorm:"references:Id"`
+	User     GORMUser `gorm:"references:ID"`
 }
 
 type Session struct {

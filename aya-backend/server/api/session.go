@@ -4,7 +4,6 @@ import (
 	models "aya-backend/db-models"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
@@ -16,11 +15,35 @@ type DBApiServer struct {
 }
 
 type UserFilter struct {
-	Email string
+	Email string `json:"email,omitempty"`
+}
+
+type SessionFilter struct {
+	ID       uint   `json:"data,omitempty"`
+	OwnerID  uint   `json:"owner_id,omitempty"`
+	IsOn     bool   `json:"is_on,omitempty"`
+	IsDelete bool   `json:"is_delete,omitempty"`
+	Discord  string `json:"discord,omitempty"`
+	Twitch   string `json:"twitch,omitempty"`
+	Youtube  string `json:"youtube,omitempty"`
 }
 
 type Content struct {
-	data any
+	Data any    `json:"data"`
+	Err  string `json:"err,omitempty"`
+}
+
+func marshalReturnData(data any, errMsg string) string {
+	returnData := Content{Data: data}
+	if errMsg != "" {
+		returnData.Err = errMsg
+	}
+	returnDataStr, err := json.Marshal(returnData)
+	if err != nil {
+		return "{}"
+	} else {
+		return string(returnDataStr)
+	}
 }
 
 func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
@@ -38,8 +61,229 @@ func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
 
 func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 	r.PathPrefix("/").
-		Methods("GET").
+		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			var sessionFilter SessionFilter
+
+			writer.Header().Set("Content-Type", "application/json")
+
+			content := req.Header.Get("Content-Type")
+			if content != "" {
+				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
+				if mediaType != "application/json" {
+					writer.WriteHeader(http.StatusUnsupportedMediaType)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
+					return
+				}
+			}
+
+			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
+			if err != nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(err.Error(), err.Error())))
+				return
+			}
+
+			session := models.GORMSession{
+				ID:      sessionFilter.ID,
+				OwnerID: sessionFilter.OwnerID,
+			}
+
+			var sessions []models.GORMSession
+
+			result := dbApiServer.db.
+				Where(&session).
+				Where("IsDelete = ?", false).
+				Find(&sessions)
+
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			writer.WriteHeader(http.StatusOK)
+			_, _ = writer.Write([]byte(marshalReturnData(sessions, "")))
+			return
+
+		})
+
+	r.PathPrefix("/").
+		Methods(http.MethodPost).
+		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			var sessionFilter SessionFilter
+
+			writer.Header().Set("Content-Type", "application/json")
+
+			content := req.Header.Get("Content-Type")
+			if content != "" {
+				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
+				if mediaType != "application/json" {
+					writer.WriteHeader(http.StatusUnsupportedMediaType)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
+					return
+				}
+			}
+
+			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
+			if err != nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(err.Error(), err.Error())))
+				return
+			}
+
+			session := models.GORMSession{
+				ID:      sessionFilter.ID,
+				OwnerID: sessionFilter.OwnerID,
+			}
+
+			result := dbApiServer.db.
+				Where("IsDelete = ?", false).
+				First(&session)
+
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			if result.Error == nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "The item already exists! The operation would override the item!")))
+				return
+			}
+
+			user := models.GORMUser{
+				ID: sessionFilter.OwnerID,
+			}
+
+			userResult := dbApiServer.db.First(&user)
+			if !errors.Is(userResult.Error, gorm.ErrRecordNotFound) && userResult.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			if errors.Is(userResult.Error, gorm.ErrRecordNotFound) {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Request does not contains proper user Id!")))
+				return
+			}
+
+			session = models.GORMSession{
+				ID:       sessionFilter.ID,
+				OwnerID:  sessionFilter.OwnerID,
+				IsOn:     false,
+				IsDelete: false,
+				Discord:  sessionFilter.Discord,
+				Twitch:   sessionFilter.Twitch,
+				Youtube:  sessionFilter.Youtube,
+				User:     user,
+			}
+
+			result = dbApiServer.db.Create(&session)
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			writer.WriteHeader(http.StatusCreated)
+			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
+			return
+
+		})
+
+	r.PathPrefix("/").
+		Methods(http.MethodPatch).
+		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			var sessionFilter SessionFilter
+
+			writer.Header().Set("Content-Type", "application/json")
+
+			content := req.Header.Get("Content-Type")
+			if content != "" {
+				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
+				if mediaType != "application/json" {
+					writer.WriteHeader(http.StatusUnsupportedMediaType)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
+					return
+				}
+			}
+
+			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
+			if err != nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(err.Error(), err.Error())))
+				return
+			}
+
+			session := models.GORMSession{
+				ID:      sessionFilter.ID,
+				OwnerID: sessionFilter.OwnerID,
+			}
+
+			result := dbApiServer.db.
+				Where("IsDelete = ?", false).
+				First(&session)
+
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the requested item!")))
+				return
+			}
+
+			user := models.GORMUser{
+				ID: sessionFilter.OwnerID,
+			}
+
+			userResult := dbApiServer.db.First(&user)
+			if !errors.Is(userResult.Error, gorm.ErrRecordNotFound) && userResult.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			if errors.Is(userResult.Error, gorm.ErrRecordNotFound) {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Request does not contains proper user Id!")))
+				return
+			}
+
+			session = models.GORMSession{
+				ID:       sessionFilter.ID,
+				OwnerID:  sessionFilter.OwnerID,
+				IsOn:     sessionFilter.IsOn,
+				IsDelete: sessionFilter.IsDelete,
+				Discord:  sessionFilter.Discord,
+				Twitch:   sessionFilter.Twitch,
+				Youtube:  sessionFilter.Youtube,
+				User:     user,
+			}
+
+			result = dbApiServer.db.Save(&session)
+
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the requested item!")))
+				return
+			}
+
+			writer.WriteHeader(http.StatusOK)
+			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
+			return
 
 		})
 }
@@ -47,50 +291,101 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 
 	r.PathPrefix("/").
-		Methods("GET").
+		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 			var uFilter UserFilter
-			err := json.NewDecoder(req.Body).Decode(&uFilter)
-			if err != nil {
-				http.Error(writer, fmt.Sprintf("error: filter format is not corrent"), http.StatusBadRequest)
-				return
-			}
 
-			user := models.User{
-				Email: uFilter.Email,
-			}
-
-			result := dbApiServer.db.FirstOrCreate(&user)
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				http.Error(writer, "Cannot find the profile", http.StatusBadRequest)
-				return
-			} else if result.Error != nil {
-				http.Error(writer, "Internal error", http.StatusInternalServerError)
-				return
-			}
+			writer.Header().Set("Content-Type", "application/json")
 
 			content := req.Header.Get("Content-Type")
 			if content != "" {
 				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
 				if mediaType != "application/json" {
-					http.Error(writer, "Content-Type header is not application/json", http.StatusUnsupportedMediaType)
+					writer.WriteHeader(http.StatusUnsupportedMediaType)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
 					return
 				}
 			}
 
-			returnContent := Content{data: user}
-
-			returnJson, err := json.Marshal(returnContent)
+			err := json.NewDecoder(req.Body).Decode(&uFilter)
 			if err != nil {
-				fmt.Printf("Error: cannot parse the user info:\n%s\n", err.Error())
-				returnJson = []byte("{}")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse requested data")))
+				return
 			}
+
+			user := models.GORMUser{
+				Email: uFilter.Email,
+			}
+
+			result := dbApiServer.db.First(&user)
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the profile")))
+				return
+			} else if result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
+				return
+			}
+
+			writer.WriteHeader(http.StatusOK)
+			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
+			return
+
+		})
+
+	r.PathPrefix("/").
+		Methods(http.MethodPost).
+		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			var uFilter UserFilter
 
 			writer.Header().Set("Content-Type", "application/json")
-			_, err = writer.Write(returnJson)
-			if err != nil {
-				fmt.Printf("Error during response: %s\n", err.Error())
+
+			content := req.Header.Get("Content-Type")
+			if content != "" {
+				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
+				if mediaType != "application/json" {
+					writer.WriteHeader(http.StatusUnsupportedMediaType)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
+					return
+				}
 			}
+
+			err := json.NewDecoder(req.Body).Decode(&uFilter)
+			if err != nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse requested data")))
+				return
+			}
+
+			user := models.GORMUser{
+				Email: uFilter.Email,
+			}
+
+			result := dbApiServer.db.First(&user)
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
+				return
+			}
+
+			if result.Error == nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "User already exists")))
+				return
+			}
+
+			result = dbApiServer.db.Create(&user)
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
+				return
+			}
+
+			writer.WriteHeader(http.StatusOK)
+			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
+			return
 
 		})
 }
