@@ -16,7 +16,8 @@ type DBApiServer struct {
 }
 
 type UserFilter struct {
-	Email string `json:"email,omitempty"`
+	ID    *uint   `json:"id,omitempty"`
+	Email *string `json:"email,omitempty"`
 }
 
 type SessionFilter struct {
@@ -302,8 +303,13 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 				return
 			}
 
-			user := models.GORMUser{
-				Email: uFilter.Email,
+			user := models.GORMUser{}
+
+			if uFilter.ID != nil {
+				user.ID = *uFilter.ID
+			}
+			if uFilter.Email != nil {
+				user.Email = *uFilter.Email
 			}
 
 			result := dbApiServer.db.First(&user)
@@ -347,8 +353,10 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 				return
 			}
 
-			user := models.GORMUser{
-				Email: uFilter.Email,
+			user := models.GORMUser{}
+
+			if uFilter.Email != nil {
+				user.Email = *uFilter.Email
 			}
 
 			result := dbApiServer.db.First(&user)
