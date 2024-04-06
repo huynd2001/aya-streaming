@@ -4,6 +4,7 @@ import (
 	models "aya-backend/db-models"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
@@ -19,13 +20,13 @@ type UserFilter struct {
 }
 
 type SessionFilter struct {
-	ID       uint   `json:"data,omitempty"`
-	OwnerID  uint   `json:"owner_id,omitempty"`
-	IsOn     bool   `json:"is_on,omitempty"`
-	IsDelete bool   `json:"is_delete,omitempty"`
-	Discord  string `json:"discord,omitempty"`
-	Twitch   string `json:"twitch,omitempty"`
-	Youtube  string `json:"youtube,omitempty"`
+	ID       uint    `json:"data,omitempty"`
+	OwnerID  uint    `json:"owner_id,omitempty"`
+	IsOn     *bool   `json:"is_on,omitempty"`
+	IsDelete *bool   `json:"is_delete,omitempty"`
+	Discord  *string `json:"discord,omitempty"`
+	Twitch   *string `json:"twitch,omitempty"`
+	Youtube  *string `json:"youtube,omitempty"`
 }
 
 type Content struct {
@@ -80,23 +81,24 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
 			if err != nil {
 				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(err.Error(), err.Error())))
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
+
 				return
 			}
 
-			session := models.GORMSession{
-				ID:      sessionFilter.ID,
-				OwnerID: sessionFilter.OwnerID,
+			sessionQuery := models.GORMSession{
+				ID:       sessionFilter.ID,
+				OwnerID:  sessionFilter.OwnerID,
+				IsDelete: false,
 			}
 
 			var sessions []models.GORMSession
 
 			result := dbApiServer.db.
-				Where(&session).
-				Where("IsDelete = ?", false).
+				Where(&sessionQuery, "id", "owner_id", "is_delete").
 				Find(&sessions)
 
-			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && err != nil {
+			if result.Error != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 				return
@@ -128,28 +130,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
 			if err != nil {
 				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(err.Error(), err.Error())))
-				return
-			}
-
-			session := models.GORMSession{
-				ID:      sessionFilter.ID,
-				OwnerID: sessionFilter.OwnerID,
-			}
-
-			result := dbApiServer.db.
-				Where("IsDelete = ?", false).
-				First(&session)
-
-			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
-				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
-				return
-			}
-
-			if result.Error == nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "The item already exists! The operation would override the item!")))
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
 				return
 			}
 
@@ -170,26 +151,48 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 				return
 			}
 
-			session = models.GORMSession{
+			sessionQuery := models.GORMSession{
 				ID:       sessionFilter.ID,
-				OwnerID:  sessionFilter.OwnerID,
-				IsOn:     false,
 				IsDelete: false,
-				Discord:  sessionFilter.Discord,
-				Twitch:   sessionFilter.Twitch,
-				Youtube:  sessionFilter.Youtube,
-				User:     user,
 			}
 
-			result = dbApiServer.db.Create(&session)
+			var session models.GORMSession
+
+			result := dbApiServer.db.
+				Where(&sessionQuery, "id", "is_delete").
+				First(&session)
+
 			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 				return
 			}
 
+			if result.Error == nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "The item already exists! The operation would override the item!")))
+				return
+			}
+
+			newSession := models.GORMSession{
+				ID:       sessionFilter.ID,
+				OwnerID:  sessionFilter.OwnerID,
+				IsOn:     false,
+				IsDelete: false,
+				Discord:  *sessionFilter.Discord,
+				Youtube:  *sessionFilter.Youtube,
+				User:     user,
+			}
+
+			result = dbApiServer.db.Create(&newSession)
+			if result.Error != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
+				return
+			}
+
 			writer.WriteHeader(http.StatusCreated)
-			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
+			_, _ = writer.Write([]byte(marshalReturnData(newSession, "")))
 			return
 
 		})
@@ -214,17 +217,19 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
 			if err != nil {
 				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(err.Error(), err.Error())))
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
 				return
 			}
 
-			session := models.GORMSession{
-				ID:      sessionFilter.ID,
-				OwnerID: sessionFilter.OwnerID,
+			sessionQuery := models.GORMSession{
+				ID:       sessionFilter.ID,
+				IsDelete: false,
 			}
 
+			var session models.GORMSession
+
 			result := dbApiServer.db.
-				Where("IsDelete = ?", false).
+				Where(sessionQuery, "id", "is_delete").
 				First(&session)
 
 			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
@@ -239,45 +244,28 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 				return
 			}
 
-			user := models.GORMUser{
-				ID: sessionFilter.OwnerID,
+			if sessionFilter.IsOn != nil {
+				session.IsOn = *sessionFilter.IsOn
 			}
 
-			userResult := dbApiServer.db.First(&user)
-			if !errors.Is(userResult.Error, gorm.ErrRecordNotFound) && userResult.Error != nil {
-				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
-				return
+			if sessionFilter.IsDelete != nil {
+				session.IsDelete = *sessionFilter.IsDelete
 			}
 
-			if errors.Is(userResult.Error, gorm.ErrRecordNotFound) {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Request does not contains proper user Id!")))
-				return
+			if sessionFilter.Discord != nil {
+				session.Discord = *sessionFilter.Discord
 			}
 
-			session = models.GORMSession{
-				ID:       sessionFilter.ID,
-				OwnerID:  sessionFilter.OwnerID,
-				IsOn:     sessionFilter.IsOn,
-				IsDelete: sessionFilter.IsDelete,
-				Discord:  sessionFilter.Discord,
-				Twitch:   sessionFilter.Twitch,
-				Youtube:  sessionFilter.Youtube,
-				User:     user,
+			if sessionFilter.Youtube != nil {
+				session.Youtube = *sessionFilter.Youtube
 			}
 
 			result = dbApiServer.db.Save(&session)
 
-			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+			if result.Error != nil {
+				fmt.Println(result.Error.Error())
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
-				return
-			}
-
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the requested item!")))
 				return
 			}
 
@@ -310,7 +298,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			err := json.NewDecoder(req.Body).Decode(&uFilter)
 			if err != nil {
 				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse requested data")))
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
 				return
 			}
 
@@ -377,7 +365,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			}
 
 			result = dbApiServer.db.Create(&user)
-			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
+			if result.Error != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
 				return

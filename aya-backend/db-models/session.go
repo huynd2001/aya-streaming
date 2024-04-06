@@ -10,7 +10,6 @@ type GORMSession struct {
 	gorm.Model
 	ID       uint
 	Discord  string
-	Twitch   string
 	Youtube  string
 	CreateAt time.Time
 	UpdateAt time.Time
@@ -23,7 +22,6 @@ type GORMSession struct {
 type Session struct {
 	ID       uint      `json:"id"`
 	Discord  *Discord  `json:"discord,omitempty"`
-	Twitch   *Twitch   `json:"twitch,omitempty"`
 	Youtube  *Youtube  `json:"youtube,omitempty"`
 	CreateAt time.Time `json:"createTime"`
 	UpdateAt time.Time `json:"updateTime"`
@@ -52,12 +50,6 @@ func convertGormToSession(gS GORMSession) Session {
 		discord = nil
 	}
 
-	var twitch *Twitch
-	err = json.Unmarshal([]byte(gS.Twitch), twitch)
-	if err != nil {
-		twitch = nil
-	}
-
 	var youtube *Youtube
 	err = json.Unmarshal([]byte(gS.Youtube), youtube)
 	if err != nil {
@@ -72,7 +64,6 @@ func convertGormToSession(gS GORMSession) Session {
 		IsOn:     gS.IsOn,
 		Discord:  discord,
 		Youtube:  youtube,
-		Twitch:   twitch,
 		OwnerID:  gS.OwnerID,
 	}
 
@@ -95,14 +86,6 @@ func convertSessionToGorm(s Session) GORMSession {
 		youtubeStr = string(youtubeBytes)
 	}
 
-	twitchBytes, err := json.Marshal(&s.Twitch)
-	var twitchStr string
-	if err != nil {
-		twitchStr = "{}"
-	} else {
-		twitchStr = string(twitchBytes)
-	}
-
 	return GORMSession{
 		ID:       s.ID,
 		CreateAt: s.CreateAt,
@@ -111,7 +94,6 @@ func convertSessionToGorm(s Session) GORMSession {
 		IsOn:     s.IsOn,
 		Discord:  discordStr,
 		Youtube:  youtubeStr,
-		Twitch:   twitchStr,
 		OwnerID:  s.OwnerID,
 	}
 }
