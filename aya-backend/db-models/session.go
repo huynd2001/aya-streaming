@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"gorm.io/gorm"
 	"time"
 )
@@ -15,19 +14,8 @@ type GORMSession struct {
 	UpdateAt time.Time
 	IsOn     bool
 	IsDelete bool
-	OwnerID  uint
+	UserID   uint
 	User     GORMUser `gorm:"references:ID"`
-}
-
-type Session struct {
-	ID       uint      `json:"id"`
-	Discord  *Discord  `json:"discord,omitempty"`
-	Youtube  *Youtube  `json:"youtube,omitempty"`
-	CreateAt time.Time `json:"createTime"`
-	UpdateAt time.Time `json:"updateTime"`
-	IsOn     bool      `json:"isOn"`
-	IsDelete bool      `json:"isDelete"`
-	OwnerID  uint      `json:"ownerId"`
 }
 
 type Discord struct {
@@ -39,61 +27,4 @@ type Twitch struct {
 }
 
 type Youtube struct {
-}
-
-func convertGormToSession(gS GORMSession) Session {
-	var err error
-
-	var discord *Discord
-	err = json.Unmarshal([]byte(gS.Discord), discord)
-	if err != nil {
-		discord = nil
-	}
-
-	var youtube *Youtube
-	err = json.Unmarshal([]byte(gS.Youtube), youtube)
-	if err != nil {
-		youtube = nil
-	}
-
-	return Session{
-		ID:       gS.ID,
-		CreateAt: gS.CreateAt,
-		UpdateAt: gS.UpdateAt,
-		IsDelete: gS.IsDelete,
-		IsOn:     gS.IsOn,
-		Discord:  discord,
-		Youtube:  youtube,
-		OwnerID:  gS.OwnerID,
-	}
-
-}
-
-func convertSessionToGorm(s Session) GORMSession {
-	discordBytes, err := json.Marshal(&s.Discord)
-	var discordStr string
-	if err != nil {
-		discordStr = "{}"
-	} else {
-		discordStr = string(discordBytes)
-	}
-
-	youtubeBytes, err := json.Marshal(&s.Youtube)
-	var youtubeStr string
-	if err != nil {
-		youtubeStr = "{}"
-	} else {
-		youtubeStr = string(youtubeBytes)
-	}
-
-	return GORMSession{
-		ID:       s.ID,
-		CreateAt: s.CreateAt,
-		UpdateAt: s.UpdateAt,
-		IsDelete: s.IsDelete,
-		IsOn:     s.IsOn,
-		Discord:  discordStr,
-		Youtube:  youtubeStr,
-		OwnerID:  s.OwnerID,
-	}
 }

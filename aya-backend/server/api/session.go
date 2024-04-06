@@ -88,7 +88,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			sessionQuery := models.GORMSession{
 				ID:       sessionFilter.ID,
-				OwnerID:  sessionFilter.OwnerID,
+				UserID:   sessionFilter.OwnerID,
 				IsDelete: false,
 			}
 
@@ -176,7 +176,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			newSession := models.GORMSession{
 				ID:       sessionFilter.ID,
-				OwnerID:  sessionFilter.OwnerID,
+				UserID:   sessionFilter.OwnerID,
 				IsOn:     false,
 				IsDelete: false,
 				Discord:  *sessionFilter.Discord,
