@@ -1,4 +1,4 @@
-package db_models
+package models
 
 import (
 	"gorm.io/gorm"
@@ -7,25 +7,15 @@ import (
 
 type GORMSession struct {
 	gorm.Model
-	Id         uint `gorm:"primaryKey"`
-	Discord    string
-	Twitch     string
-	Youtube    string
-	CreateTime time.Time
-	UpdateTime time.Time
-	IsOn       bool
-	IsDelete   bool
-}
-
-type Session struct {
-	Id         uint      `json:"id"`
-	Discord    *Discord  `json:"discord,omitempty"`
-	Twitch     *Twitch   `json:"twitch,omitempty"`
-	Youtube    *Youtube  `json:"youtube,omitempty"`
-	CreateTime time.Time `json:"createTime"`
-	UpdateTime time.Time `json:"UpdateTime"`
-	IsOn       bool      `json:"isOn"`
-	IsDelete   bool      `json:"isDelete"`
+	ID       uint
+	Discord  string
+	Youtube  string
+	CreateAt time.Time
+	UpdateAt time.Time
+	IsOn     bool
+	IsDelete bool
+	UserID   uint
+	User     GORMUser `gorm:"references:ID"`
 }
 
 type Discord struct {

@@ -72,5 +72,11 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Migrate database successfully! Have fun developing.")
+	var user model.GORMUser
+	err = db.AutoMigrate(&user)
+	if err != nil {
+		fmt.Printf("Error when migrating the interface User: %s\n", err.Error())
+	}
+
+	fmt.Printf("Migrate database successfully! Have fun developing.\n")
 }
