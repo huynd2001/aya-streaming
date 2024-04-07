@@ -2,23 +2,12 @@ package api
 
 import (
 	models "aya-backend/db-models"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
-	"strings"
 )
-
-type DBApiServer struct {
-	db *gorm.DB
-}
-
-type UserFilter struct {
-	ID    *uint   `json:"id,omitempty"`
-	Email *string `json:"email,omitempty"`
-}
 
 type SessionFilter struct {
 	ID       uint    `json:"data,omitempty"`
@@ -30,62 +19,14 @@ type SessionFilter struct {
 	Youtube  *string `json:"youtube,omitempty"`
 }
 
-type Content struct {
-	Data any    `json:"data,omitempty"`
-	Err  string `json:"err,omitempty"`
-}
-
-func marshalReturnData(data any, errMsg string) string {
-	returnData := Content{Data: data}
-	if errMsg != "" {
-		returnData.Err = errMsg
-	}
-	returnDataStr, err := json.Marshal(returnData)
-	if err != nil {
-		return "{}"
-	} else {
-		return string(returnDataStr)
-	}
-}
-
-func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
-
-	dbApiServer := DBApiServer{db: db}
-
-	session := r.PathPrefix("/session").Subrouter()
-	dbApiServer.NewSessionApi(session)
-
-	user := r.PathPrefix("/user").Subrouter()
-	dbApiServer.NewUserApi(user)
-
-	return &dbApiServer
-}
-
 func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
+
+	r.Use(getContentParsingHandler(&SessionFilter{}))
+
 	r.PathPrefix("/").
 		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			var sessionFilter SessionFilter
-
-			writer.Header().Set("Content-Type", "application/json")
-
-			content := req.Header.Get("Content-Type")
-			if content != "" {
-				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-				if mediaType != "application/json" {
-					writer.WriteHeader(http.StatusUnsupportedMediaType)
-					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
-					return
-				}
-			}
-
-			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
-			if err != nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
-
-				return
-			}
+			sessionFilter := req.Context().Value(contextKey("filter")).(*SessionFilter)
 
 			sessionQuery := models.GORMSession{
 				ID:       sessionFilter.ID,
@@ -114,26 +55,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodPost).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			var sessionFilter SessionFilter
-
-			writer.Header().Set("Content-Type", "application/json")
-
-			content := req.Header.Get("Content-Type")
-			if content != "" {
-				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-				if mediaType != "application/json" {
-					writer.WriteHeader(http.StatusUnsupportedMediaType)
-					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
-					return
-				}
-			}
-
-			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
-			if err != nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
-				return
-			}
+			sessionFilter := req.Context().Value(contextKey("filter")).(*SessionFilter)
 
 			user := models.GORMUser{
 				ID: sessionFilter.OwnerID,
@@ -199,28 +121,9 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 		})
 
 	r.PathPrefix("/").
-		Methods(http.MethodPatch).
+		Methods(http.MethodPut).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			var sessionFilter SessionFilter
-
-			writer.Header().Set("Content-Type", "application/json")
-
-			content := req.Header.Get("Content-Type")
-			if content != "" {
-				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-				if mediaType != "application/json" {
-					writer.WriteHeader(http.StatusUnsupportedMediaType)
-					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
-					return
-				}
-			}
-
-			err := json.NewDecoder(req.Body).Decode(&sessionFilter)
-			if err != nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
-				return
-			}
+			sessionFilter := req.Context().Value(contextKey("filter")).(*SessionFilter)
 
 			sessionQuery := models.GORMSession{
 				ID:       sessionFilter.ID,
@@ -272,115 +175,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
-			return
-
-		})
-}
-
-func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
-
-	r.PathPrefix("/").
-		Methods(http.MethodGet).
-		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			var uFilter UserFilter
-
-			writer.Header().Set("Content-Type", "application/json")
-
-			content := req.Header.Get("Content-Type")
-			if content != "" {
-				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-				if mediaType != "application/json" {
-					writer.WriteHeader(http.StatusUnsupportedMediaType)
-					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
-					return
-				}
-			}
-
-			err := json.NewDecoder(req.Body).Decode(&uFilter)
-			if err != nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "cannot parse payload content")))
-				return
-			}
-
-			user := models.GORMUser{}
-
-			if uFilter.ID != nil {
-				user.ID = *uFilter.ID
-			}
-			if uFilter.Email != nil {
-				user.Email = *uFilter.Email
-			}
-
-			result := dbApiServer.db.First(&user)
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the profile")))
-				return
-			} else if result.Error != nil {
-				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
-				return
-			}
-
-			writer.WriteHeader(http.StatusOK)
-			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
-			return
-
-		})
-
-	r.PathPrefix("/").
-		Methods(http.MethodPost).
-		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			var uFilter UserFilter
-
-			writer.Header().Set("Content-Type", "application/json")
-
-			content := req.Header.Get("Content-Type")
-			if content != "" {
-				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-				if mediaType != "application/json" {
-					writer.WriteHeader(http.StatusUnsupportedMediaType)
-					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
-					return
-				}
-			}
-
-			err := json.NewDecoder(req.Body).Decode(&uFilter)
-			if err != nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse requested data")))
-				return
-			}
-
-			user := models.GORMUser{}
-
-			if uFilter.Email != nil {
-				user.Email = *uFilter.Email
-			}
-
-			result := dbApiServer.db.First(&user)
-			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
-				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
-				return
-			}
-
-			if result.Error == nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "User already exists")))
-				return
-			}
-
-			result = dbApiServer.db.Create(&user)
-			if result.Error != nil {
-				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
-				return
-			}
-
-			writer.WriteHeader(http.StatusOK)
-			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
 			return
 
 		})
