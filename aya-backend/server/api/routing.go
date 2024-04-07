@@ -30,7 +30,14 @@ var (
 	authJwksEndpoint string
 )
 
-type contextKey string
+type contextKey int
+
+const (
+	CONTEXT_KEY_JWT_CLAIM contextKey = iota
+	CONTEXT_KEY_REQ_FILTER
+	CONTEXT_KEY_USER
+	CONTEXT_KEY_SESSION
+)
 
 func marshalReturnData(data any, errMsg string) string {
 	returnData := Content{Data: data}
@@ -45,8 +52,8 @@ func marshalReturnData(data any, errMsg string) string {
 	}
 }
 
-// getContentParsingHandler resolves the filter data
-func getContentParsingHandler(dataModel any) mux.MiddlewareFunc {
+// inputParsingMiddleware resolves the filter data
+func inputParsingMiddleware(dataModel any) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
@@ -69,14 +76,14 @@ func getContentParsingHandler(dataModel any) mux.MiddlewareFunc {
 				return
 			}
 
-			reqWithFilter := req.WithContext(context.WithValue(req.Context(), contextKey("filter"), dataModel))
+			reqWithFilter := req.WithContext(context.WithValue(req.Context(), CONTEXT_KEY_REQ_FILTER, dataModel))
 
 			next.ServeHTTP(writer, reqWithFilter)
 		})
 	}
 }
 
-func authenticateMiddleware(next http.Handler) http.Handler {
+func jwtAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
 		writer.Header().Set("Content-Type", "application/json")
@@ -115,7 +122,7 @@ func authenticateMiddleware(next http.Handler) http.Handler {
 			_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized bearer token!")))
 		}
 
-		reqWithAuthorization := req.WithContext(context.WithValue(req.Context(), contextKey("jwtClaim"), token.Claims.(jwt.MapClaims)))
+		reqWithAuthorization := req.WithContext(context.WithValue(req.Context(), contextKey(CONTEXT_KEY_JWT_CLAIM), token.Claims.(jwt.MapClaims)))
 
 		next.ServeHTTP(writer, reqWithAuthorization)
 	})
@@ -126,7 +133,7 @@ func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
 	dbApiServer := DBApiServer{db: db}
 	authJwksEndpoint = os.Getenv(AUTH_JWKS_ENDPOINT_ENV)
 
-	r.Use(authenticateMiddleware)
+	r.Use(jwtAuthMiddleware)
 
 	session := r.PathPrefix("/session").Subrouter()
 	dbApiServer.NewSessionApi(session)

@@ -2,11 +2,13 @@ package api
 
 import (
 	models "aya-backend/db-models"
-	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
+	"slices"
 )
 
 type UserFilter struct {
@@ -14,33 +16,75 @@ type UserFilter struct {
 	Email *string `json:"email,omitempty"`
 }
 
+func extractUserFilter(userFilter *UserFilter) (*models.GORMUser, []string) {
+	userQuery := models.GORMUser{}
+
+	var args []string
+	if userFilter.ID != nil {
+		userQuery.ID = *userFilter.ID
+		args = append(args, "id")
+	}
+
+	if userFilter.Email != nil {
+		userQuery.Email = *userFilter.Email
+		args = append(args, "email")
+	}
+
+	return &userQuery, args
+
+}
+
+func authUserOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+
+			newReqWithContext := req
+
+			userFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
+			jwtClaim := req.Context().Value(CONTEXT_KEY_JWT_CLAIM).(jwt.MapClaims)
+
+			userQuery, args := extractUserFilter(userFilter)
+
+			if !slices.Contains(args, "email") {
+				writer.WriteHeader(http.StatusForbidden)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Query filter does not contains required fields")))
+				return
+			}
+
+			jwtClaimEmail := jwtClaim["email"].(string)
+
+			if jwtClaimEmail != userQuery.Email {
+				writer.WriteHeader(http.StatusUnauthorized)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized Bearer Token")))
+				return
+			}
+
+			next.ServeHTTP(writer, newReqWithContext)
+		})
+	}
+}
+
 func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 
-	r.Use(getContentParsingHandler(&UserFilter{}))
+	r.Use(inputParsingMiddleware(&UserFilter{}))
 
 	r.PathPrefix("/").
 		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			uFilter := req.Context().Value(contextKey("filter")).(*UserFilter)
+			userFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
 
-			// Skip error handling in this step since it has been done in middleware
-			_ = json.NewDecoder(req.Body).Decode(&uFilter)
+			userQuery, args := extractUserFilter(userFilter)
+			var user models.GORMUser
 
-			user := models.GORMUser{}
+			result := dbApiServer.db.Where(&userQuery, args).First(&user)
 
-			if uFilter.ID != nil {
-				user.ID = *uFilter.ID
-			}
-			if uFilter.Email != nil {
-				user.Email = *uFilter.Email
-			}
-
-			result := dbApiServer.db.First(&user)
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the profile")))
 				return
-			} else if result.Error != nil {
+			}
+			if result.Error != nil {
+				fmt.Println(result.Error.Error())
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
 				return
@@ -55,20 +99,16 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodPost).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			uFilter := req.Context().Value(contextKey("filter")).(*UserFilter)
+			userFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
 
-			user := models.GORMUser{}
-
-			if uFilter.Email != nil {
-				user.Email = *uFilter.Email
+			userQuery := models.GORMUser{
+				Email: *userFilter.Email,
 			}
+			var user models.GORMUser
 
-			result := dbApiServer.db.First(&user)
-			if !errors.Is(result.Error, gorm.ErrRecordNotFound) && result.Error != nil {
-				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
-				return
-			}
+			result := dbApiServer.db.
+				Where(&userQuery, "email").
+				First(&user)
 
 			if result.Error == nil {
 				writer.WriteHeader(http.StatusBadRequest)
@@ -76,7 +116,16 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 				return
 			}
 
-			result = dbApiServer.db.Create(&user)
+			if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				fmt.Println(result.Error.Error())
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
+				return
+			}
+
+			newUser := models.GORMUser{Email: *userFilter.Email}
+
+			result = dbApiServer.db.Create(&newUser)
 			if result.Error != nil {
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
@@ -84,7 +133,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			}
 
 			writer.WriteHeader(http.StatusOK)
-			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
+			_, _ = writer.Write([]byte(marshalReturnData(newUser, "")))
 			return
 
 		})
