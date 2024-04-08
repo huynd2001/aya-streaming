@@ -14,7 +14,7 @@
       <mat-list>
         @if (isAuth) {
           <mat-list-item>
-            <span>Logged in!</span>
+            <span>User Id: {{userInfo?.ID}} Logged in!</span>
           </mat-list-item>
 
 
@@ -22,7 +22,6 @@
             <button (click)="logout()" mat-button>Log out</button>
           </mat-list-item>
         } @else {
-
           <mat-list-item>
             <button (click)="login()" mat-button>Log in</button>
           </mat-list-item>

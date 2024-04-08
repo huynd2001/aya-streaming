@@ -9,7 +9,9 @@ import {
 } from 'angular-auth-oidc-client';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatList, MatListItem } from '@angular/material/list';
-import { filter, Subscription } from 'rxjs';
+import { map, Subscription, switchMap, throwError } from 'rxjs';
+import { UserInfoService } from '../services/user-info.service';
+import { User } from '../interfaces/user';
 
 @Component({
   selector: 'app-home',
@@ -30,48 +32,105 @@ import { filter, Subscription } from 'rxjs';
 })
 export default class HomePage implements OnInit, OnDestroy {
   public isAuth: boolean = false;
-  userDataSubscription: Subscription | undefined;
-  authSubscription: Subscription | undefined;
+  public userInfo: User | undefined;
+  // public isLoading: boolean = true;
+
+  private authSubscription: Subscription = new Subscription();
+  private userInfoSubscription: Subscription = new Subscription();
+  // private isLoadingSubscription: Subscription = new Subscription();
 
   private readonly oidcSecurityService = inject(OidcSecurityService);
-  private readonly eventService = inject(PublicEventsService);
+  // private readonly eventService = inject(PublicEventsService);
+  private readonly userInfoService = inject(UserInfoService);
 
   ngOnInit(): void {
-    console.log('huh');
-    this.eventService
-      .registerForEvents()
+    let userInfo$ = this.oidcSecurityService
+      .checkAuth()
       .pipe(
-        filter(
-          (event) =>
-            event.type === EventTypes.SilentRenewStarted ||
-            event.type === EventTypes.SilentRenewFailed
-        )
+        switchMap((loginResponse) => {
+          if (loginResponse.userData && loginResponse.accessToken) {
+            let email = loginResponse.userData['email'];
+            return this.userInfoService.getUserInfo$(
+              loginResponse.accessToken,
+              email
+            );
+          } else {
+            return throwError(
+              () => new Error('No user data yet. Please log in!')
+            );
+          }
+        })
       )
-      .subscribe({
-        next: (u) => {
-          console.log(u);
-        },
-        error: (error) => {
-          console.error(error);
-        },
-      });
-    this.userDataSubscription = this.oidcSecurityService.userData$.subscribe({
-      next: (userData) => {
-        console.log(userData);
-      },
-      error: (error) => console.error(error),
-    });
-    this.authSubscription = this.oidcSecurityService.isAuthenticated$.subscribe(
-      {
-        next: (authRes) => {
-          this.isAuth = authRes.isAuthenticated;
-        },
-        error: (error) => console.error(error),
-      }
+      .pipe(
+        map(({ data, err }) => {
+          if (err) {
+            throw new Error(err);
+          } else if (data) {
+            return data;
+          } else {
+            throw new Error('No data found');
+          }
+        })
+      );
+
+    let isAuth$ = this.oidcSecurityService.isAuthenticated$.pipe(
+      map((authResult) => authResult.isAuthenticated)
     );
-    this.oidcSecurityService.checkAuth().subscribe((next) => {
-      // Do nothing
-    });
+
+    // let isLoading$ = this.eventService.registerForEvents().pipe(
+    //   filter(
+    //     (event) =>
+    //       event.type === EventTypes.CheckingAuth ||
+    //       event.type === EventTypes.CheckingAuthFinished ||
+    //       event.type === EventTypes.CheckingAuthFinishedWithError
+    //   ),
+    //   map((event) => {
+    //     switch (event.type) {
+    //       case EventTypes.CheckingAuth:
+    //         return true;
+    //       case EventTypes.CheckingAuthFinishedWithError:
+    //         return false;
+    //       case EventTypes.CheckingAuthFinished:
+    //         return false;
+    //       default:
+    //         return true;
+    //     }
+    //   })
+    // );
+
+    this.userInfoSubscription.add(
+      userInfo$.subscribe({
+        next: (userInfo) => {
+          this.userInfo = userInfo;
+        },
+        error: (err) => {
+          console.log('lmao');
+          console.error(err);
+        },
+      })
+    );
+
+    this.authSubscription.add(
+      isAuth$.subscribe({
+        next: (isAuth) => {
+          this.isAuth = isAuth;
+        },
+        error: (err) => {
+          console.error(err);
+        },
+      })
+    );
+
+    // this.isLoadingSubscription.add(
+    //   isLoading$.subscribe({
+    //     next: (isLoading) => {
+    //       this.isLoading = isLoading;
+    //     },
+    //     error: (err) => {
+    //       console.log(err);
+    //     },
+    //   })
+    // );
   }
 
   login() {
@@ -85,7 +144,7 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.userDataSubscription?.unsubscribe();
-    this.authSubscription?.unsubscribe();
+    this.authSubscription.unsubscribe();
+    this.userInfoSubscription.unsubscribe();
   }
 }

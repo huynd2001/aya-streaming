@@ -7,6 +7,7 @@ import (
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	"gorm.io/gorm"
 	"net/http"
 	"os"
@@ -59,26 +60,38 @@ func inputParsingMiddleware(dataModel any) mux.MiddlewareFunc {
 
 			writer.Header().Set("Content-Type", "application/json")
 
-			content := req.Header.Get("Content-Type")
-			if content != "" {
-				mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-				if mediaType != "application/json" {
-					writer.WriteHeader(http.StatusUnsupportedMediaType)
-					_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
+			if req.Method != http.MethodGet {
+				content := req.Header.Get("Content-Type")
+				if content != "" {
+					mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
+					if mediaType != "application/json" {
+						writer.WriteHeader(http.StatusUnsupportedMediaType)
+						_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
+						return
+					}
+				}
+
+				err := json.NewDecoder(req.Body).Decode(dataModel)
+				if err != nil {
+					writer.WriteHeader(http.StatusBadRequest)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse payload content")))
+					return
+				}
+
+			} else {
+				reqQuery := req.URL.Query()
+				var decoder = schema.NewDecoder()
+				err := decoder.Decode(dataModel, reqQuery)
+				if err != nil {
+					writer.WriteHeader(http.StatusBadRequest)
+					_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse payload content")))
 					return
 				}
 			}
 
-			err := json.NewDecoder(req.Body).Decode(dataModel)
-			if err != nil {
-				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse payload content")))
-				return
-			}
-
 			reqWithFilter := req.WithContext(context.WithValue(req.Context(), CONTEXT_KEY_REQ_FILTER, dataModel))
-
 			next.ServeHTTP(writer, reqWithFilter)
+
 		})
 	}
 }

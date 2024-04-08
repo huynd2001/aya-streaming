@@ -38,11 +38,11 @@ func ParseSource(s string) (Source, error) {
 	return Source(value), nil
 }
 
-func (s *Source) String() string {
-	return sourceToStr[int(*s)]
+func (s Source) String() string {
+	return sourceToStr[int(s)]
 }
 
-func (s *Source) MarshalJSON() ([]byte, error) {
+func (s Source) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
@@ -88,11 +88,11 @@ func ParseUpdate(s string) (Update, error) {
 	return Update(value), nil
 }
 
-func (s *Update) String() string {
-	return updateToStr[int(*s)]
+func (s Update) String() string {
+	return updateToStr[int(s)]
 }
 
-func (s *Update) MarshalJSON() ([]byte, error) {
+func (s Update) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
