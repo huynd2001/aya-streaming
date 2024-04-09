@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
@@ -58,31 +59,25 @@ func inputParsingMiddleware(dataModel any) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
-			writer.Header().Set("Content-Type", "application/json")
-
-			if req.Method != http.MethodGet {
-				content := req.Header.Get("Content-Type")
-				if content != "" {
-					mediaType := strings.ToLower(strings.TrimSpace(strings.Split(content, ";")[0]))
-					if mediaType != "application/json" {
-						writer.WriteHeader(http.StatusUnsupportedMediaType)
-						_, _ = writer.Write([]byte(marshalReturnData(nil, "Content-Type header is not application/json")))
-						return
-					}
-				}
-
-				err := json.NewDecoder(req.Body).Decode(dataModel)
+			switch req.Method {
+			case http.MethodOptions:
+				next.ServeHTTP(writer, req)
+				return
+			case http.MethodGet:
+				reqQuery := req.URL.Query()
+				var decoder = schema.NewDecoder()
+				fmt.Println(req.URL.String())
+				err := decoder.Decode(dataModel, reqQuery)
 				if err != nil {
+					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusBadRequest)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse payload content")))
 					return
 				}
-
-			} else {
-				reqQuery := req.URL.Query()
-				var decoder = schema.NewDecoder()
-				err := decoder.Decode(dataModel, reqQuery)
+			default:
+				err := json.NewDecoder(req.Body).Decode(dataModel)
 				if err != nil {
+					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusBadRequest)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot parse payload content")))
 					return
@@ -99,13 +94,17 @@ func inputParsingMiddleware(dataModel any) mux.MiddlewareFunc {
 func jwtAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
-		writer.Header().Set("Content-Type", "application/json")
+		if req.Method == http.MethodOptions {
+			next.ServeHTTP(writer, req)
+			return
+		}
 
 		bearerTokenStr := req.Header.Get("Authorization")
 		jwtStr := strings.TrimPrefix(bearerTokenStr, "Bearer ")
 
 		jwkFunc, err := keyfunc.NewDefaultCtx(context.Background(), []string{authJwksEndpoint})
 		if err != nil {
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusUnauthorized)
 			_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized bearer token!")))
 			return
@@ -114,7 +113,7 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 		token, err := jwt.Parse(jwtStr, jwkFunc.Keyfunc)
 
 		if err != nil {
-
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusUnauthorized)
 
 			switch {
@@ -131,11 +130,13 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		if !token.Valid {
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusUnauthorized)
 			_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized bearer token!")))
+			return
 		}
 
-		reqWithAuthorization := req.WithContext(context.WithValue(req.Context(), contextKey(CONTEXT_KEY_JWT_CLAIM), token.Claims.(jwt.MapClaims)))
+		reqWithAuthorization := req.WithContext(context.WithValue(req.Context(), CONTEXT_KEY_JWT_CLAIM, token.Claims.(jwt.MapClaims)))
 
 		next.ServeHTTP(writer, reqWithAuthorization)
 	})
@@ -146,6 +147,14 @@ func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
 	dbApiServer := DBApiServer{db: db}
 	authJwksEndpoint = os.Getenv(AUTH_JWKS_ENDPOINT_ENV)
 
+	r.Use(mux.CORSMethodMiddleware(r))
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			writer.Header().Set("Access-Control-Allow-Origin", "*")
+			next.ServeHTTP(writer, req)
+			return
+		})
+	})
 	r.Use(jwtAuthMiddleware)
 
 	session := r.PathPrefix("/session").Subrouter()

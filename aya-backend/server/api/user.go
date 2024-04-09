@@ -38,6 +38,11 @@ func authUserOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
+			if req.Method == "OPTIONS" {
+				next.ServeHTTP(writer, req)
+				return
+			}
+
 			newReqWithContext := req
 
 			userFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
@@ -46,6 +51,7 @@ func authUserOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 			userQuery, args := extractUserFilter(userFilter)
 
 			if !slices.Contains(args, "email") {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusForbidden)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Query filter does not contains required fields")))
 				return
@@ -54,6 +60,7 @@ func authUserOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 			jwtClaimEmail := jwtClaim["email"].(string)
 
 			if jwtClaimEmail != userQuery.Email {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusUnauthorized)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized Bearer Token")))
 				return
@@ -67,6 +74,15 @@ func authUserOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 
 	r.Use(inputParsingMiddleware(&UserFilter{}))
+	r.Use(authUserOwnerMiddleware(dbApiServer.db))
+
+	r.PathPrefix("/").
+		Methods(http.MethodOptions).
+		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			writer.Header().Set("Allow", "OPTIONS, GET, POST")
+			writer.WriteHeader(http.StatusNoContent)
+			return
+		})
 
 	r.PathPrefix("/").
 		Methods(http.MethodGet).
@@ -79,12 +95,14 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			result := dbApiServer.db.Where(&userQuery, args).First(&user)
 
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Cannot find the profile")))
 				return
 			}
 			if result.Error != nil {
 				fmt.Println(result.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
 				return
@@ -111,6 +129,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 				First(&user)
 
 			if result.Error == nil {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "User already exists")))
 				return
@@ -118,6 +137,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 
 			if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				fmt.Println(result.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
 				return
@@ -127,11 +147,14 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 
 			result = dbApiServer.db.Create(&newUser)
 			if result.Error != nil {
+				fmt.Println(result.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal error")))
 				return
 			}
 
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(newUser, "")))
 			return

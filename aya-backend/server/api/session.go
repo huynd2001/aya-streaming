@@ -63,6 +63,11 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
+			if req.Method == "OPTIONS" {
+				next.ServeHTTP(writer, req)
+				return
+			}
+
 			newReqWithContext := req
 
 			sessionFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
@@ -71,6 +76,7 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 			sessionQuery, args := extractSessionFilter(sessionFilter)
 
 			if !slices.Contains(args, "user_id") {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusForbidden)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Query filter does not contains required fields")))
 				return
@@ -85,6 +91,7 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 			userQueryResult := db.Where(&userQuery, "id").First(&user)
 
 			if userQueryResult.Error != nil {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "User not found")))
 				return
@@ -94,6 +101,7 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 			userQueryEmail := user.Email
 
 			if jwtClaimEmail != userQueryEmail {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusForbidden)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "User Not Authorized")))
 				return
@@ -112,12 +120,15 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 					First(&session)
 
 				if errors.Is(sessionQueryResult.Error, gorm.ErrRecordNotFound) {
+					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusBadRequest)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "session id does not exists")))
 					return
 				}
 
 				if sessionQueryResult.Error != nil {
+					fmt.Println(sessionQueryResult.Error.Error())
+					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusInternalServerError)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 					return
@@ -125,6 +136,7 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 
 				sessionUserEmail := session.User.Email
 				if jwtClaimEmail != sessionUserEmail {
+					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusForbidden)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "User Not Authorize")))
 					return
@@ -144,8 +156,15 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 	r.Use(inputParsingMiddleware(&SessionFilter{}))
-
 	r.Use(authSessionOwnerMiddleware(dbApiServer.db))
+
+	r.PathPrefix("/").
+		Methods(http.MethodOptions).
+		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+			writer.Header().Set("Allow", "OPTIONS, GET, POST, PUT, DELETE")
+			writer.WriteHeader(http.StatusNoContent)
+			return
+		})
 
 	r.PathPrefix("/").
 		Methods(http.MethodGet).
@@ -162,11 +181,13 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			if result.Error != nil {
 				fmt.Println(result.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 				return
 			}
 
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(sessions, "")))
 			return
@@ -191,12 +212,14 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			result := dbApiServer.db.Create(&newSession)
 			if result.Error != nil {
 				fmt.Println(result.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 				return
 			}
 
-			writer.WriteHeader(http.StatusCreated)
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(newSession, "")))
 			return
 
@@ -230,11 +253,13 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			if sessionResult.Error != nil {
 				fmt.Println(sessionResult.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 				return
 			}
 
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
 			return
@@ -246,6 +271,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
 			if req.Context().Value(CONTEXT_KEY_SESSION) == nil {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Missing required fields")))
 				return
@@ -263,11 +289,13 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			if sessionResult.Error != nil {
 				fmt.Println(sessionResult.Error.Error())
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusInternalServerError)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error")))
 				return
 			}
 
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
 			return

@@ -30,6 +30,7 @@
     "@angular/router": "^17.2.0",
     "@nx/angular": "~18.0.0",
     "angular-auth-oidc-client": "17.0.0",
+    "axios": "^1.6.8",
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.11.3",
     "front-matter": "^4.0.2",

@@ -9,7 +9,7 @@ import {
 } from 'angular-auth-oidc-client';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatList, MatListItem } from '@angular/material/list';
-import { map, Subscription, switchMap, throwError } from 'rxjs';
+import { filter, map, Subscription, switchMap, throwError } from 'rxjs';
 import { UserInfoService } from '../services/user-info.service';
 import { User } from '../interfaces/user';
 
@@ -33,14 +33,14 @@ import { User } from '../interfaces/user';
 export default class HomePage implements OnInit, OnDestroy {
   public isAuth: boolean = false;
   public userInfo: User | undefined;
-  // public isLoading: boolean = true;
+  public isLoading: boolean = true;
 
   private authSubscription: Subscription = new Subscription();
   private userInfoSubscription: Subscription = new Subscription();
-  // private isLoadingSubscription: Subscription = new Subscription();
+  private isLoadingSubscription: Subscription = new Subscription();
 
   private readonly oidcSecurityService = inject(OidcSecurityService);
-  // private readonly eventService = inject(PublicEventsService);
+  private readonly eventService = inject(PublicEventsService);
   private readonly userInfoService = inject(UserInfoService);
 
   ngOnInit(): void {
@@ -77,26 +77,26 @@ export default class HomePage implements OnInit, OnDestroy {
       map((authResult) => authResult.isAuthenticated)
     );
 
-    // let isLoading$ = this.eventService.registerForEvents().pipe(
-    //   filter(
-    //     (event) =>
-    //       event.type === EventTypes.CheckingAuth ||
-    //       event.type === EventTypes.CheckingAuthFinished ||
-    //       event.type === EventTypes.CheckingAuthFinishedWithError
-    //   ),
-    //   map((event) => {
-    //     switch (event.type) {
-    //       case EventTypes.CheckingAuth:
-    //         return true;
-    //       case EventTypes.CheckingAuthFinishedWithError:
-    //         return false;
-    //       case EventTypes.CheckingAuthFinished:
-    //         return false;
-    //       default:
-    //         return true;
-    //     }
-    //   })
-    // );
+    let isLoading$ = this.eventService.registerForEvents().pipe(
+      filter(
+        (event) =>
+          event.type === EventTypes.CheckingAuth ||
+          event.type === EventTypes.CheckingAuthFinished ||
+          event.type === EventTypes.CheckingAuthFinishedWithError
+      ),
+      map((event) => {
+        switch (event.type) {
+          case EventTypes.CheckingAuth:
+            return true;
+          case EventTypes.CheckingAuthFinishedWithError:
+            return false;
+          case EventTypes.CheckingAuthFinished:
+            return false;
+          default:
+            return true;
+        }
+      })
+    );
 
     this.userInfoSubscription.add(
       userInfo$.subscribe({
@@ -121,16 +121,16 @@ export default class HomePage implements OnInit, OnDestroy {
       })
     );
 
-    // this.isLoadingSubscription.add(
-    //   isLoading$.subscribe({
-    //     next: (isLoading) => {
-    //       this.isLoading = isLoading;
-    //     },
-    //     error: (err) => {
-    //       console.log(err);
-    //     },
-    //   })
-    // );
+    this.isLoadingSubscription.add(
+      isLoading$.subscribe({
+        next: (isLoading) => {
+          this.isLoading = isLoading;
+        },
+        error: (err) => {
+          console.log(err);
+        },
+      })
+    );
   }
 
   login() {
@@ -146,5 +146,6 @@ export default class HomePage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.authSubscription.unsubscribe();
     this.userInfoSubscription.unsubscribe();
+    this.isLoadingSubscription.unsubscribe();
   }
 }
