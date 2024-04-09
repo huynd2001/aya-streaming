@@ -104,9 +104,10 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 
 		jwkFunc, err := keyfunc.NewDefaultCtx(context.Background(), []string{authJwksEndpoint})
 		if err != nil {
+			fmt.Println(err.Error())
 			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusUnauthorized)
-			_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized bearer token!")))
+			writer.WriteHeader(http.StatusInternalServerError)
+			_, _ = writer.Write([]byte(marshalReturnData(nil, "Internal Server Error!")))
 			return
 		}
 
@@ -114,17 +115,23 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 
 		if err != nil {
 			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusUnauthorized)
 
 			switch {
 			case errors.Is(err, jwt.ErrSignatureInvalid):
+				writer.WriteHeader(http.StatusUnauthorized)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Invalid Signature!")))
 				return
 			case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
+				writer.WriteHeader(http.StatusUnauthorized)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Token expired!")))
 				return
+			case errors.Is(err, jwt.ErrTokenMalformed):
+				writer.WriteHeader(http.StatusUnauthorized)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Token malformed!")))
 			default:
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized bearer token!")))
+				fmt.Println(err.Error())
+				writer.WriteHeader(http.StatusInternalServerError)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Recognized Error!")))
 				return
 			}
 		}
@@ -132,7 +139,7 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 		if !token.Valid {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusUnauthorized)
-			_, _ = writer.Write([]byte(marshalReturnData(nil, "Unauthorized bearer token!")))
+			_, _ = writer.Write([]byte(marshalReturnData(nil, "Invalid token!")))
 			return
 		}
 
