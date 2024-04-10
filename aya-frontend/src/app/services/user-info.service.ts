@@ -25,6 +25,7 @@ export class UserInfoService {
         catchError((err: any): Observable<{ data?: User; err?: string }> => {
           console.error(err);
           return of({
+            data: undefined,
             err: String(err),
           });
         }),
@@ -58,6 +59,7 @@ export class UserInfoService {
         catchError((err: any) => {
           console.error(err);
           return of({
+            data: undefined,
             err: String(err),
           });
         })

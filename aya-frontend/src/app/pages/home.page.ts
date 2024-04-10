@@ -1,6 +1,6 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { MatToolbar } from '@angular/material/toolbar';
-import { MatIcon } from '@angular/material/icon';
+import { MatIcon, MatIconRegistry } from '@angular/material/icon';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import {
   EventTypes,
@@ -12,6 +12,9 @@ import { MatList, MatListItem } from '@angular/material/list';
 import { filter, map, Subscription, switchMap, throwError } from 'rxjs';
 import { UserInfoService } from '../services/user-info.service';
 import { User } from '../interfaces/user';
+import { DomSanitizer } from '@angular/platform-browser';
+import { MatDialog } from '@angular/material/dialog';
+import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
 
 @Component({
   selector: 'app-home',
@@ -42,6 +45,16 @@ export default class HomePage implements OnInit, OnDestroy {
   private readonly oidcSecurityService = inject(OidcSecurityService);
   private readonly eventService = inject(PublicEventsService);
   private readonly userInfoService = inject(UserInfoService);
+  private readonly matIconRegistry = inject(MatIconRegistry);
+  private readonly domSanitizer = inject(DomSanitizer);
+  private readonly dialog = inject(MatDialog);
+
+  constructor() {
+    this.matIconRegistry.addSvgIcon(
+      `aya_logo`,
+      this.domSanitizer.bypassSecurityTrustResourceUrl('/aya.svg')
+    );
+  }
 
   ngOnInit(): void {
     let userInfo$ = this.oidcSecurityService
@@ -148,4 +161,10 @@ export default class HomePage implements OnInit, OnDestroy {
     this.userInfoSubscription.unsubscribe();
     this.isLoadingSubscription.unsubscribe();
   }
+
+  openDialog() {
+    this.dialog.open(SessionDialogComponent);
+  }
+
+  protected readonly open = open;
 }
