@@ -13,12 +13,11 @@ import (
 )
 
 type SessionFilter struct {
-	ID       *uint   `json:"data,omitempty"`
-	UserID   *uint   `json:"user_id,omitempty"`
-	IsOn     *bool   `json:"is_on,omitempty"`
-	IsDelete *bool   `json:"is_delete,omitempty"`
-	Discord  *string `json:"discord,omitempty"`
-	Youtube  *string `json:"youtube,omitempty"`
+	ID        *uint   `json:"data,omitempty"`
+	UserID    *uint   `json:"user_id,omitempty"`
+	IsOn      *bool   `json:"is_on,omitempty"`
+	IsDelete  *bool   `json:"is_delete,omitempty"`
+	Resources *string `json:"resources,omitempty"`
 }
 
 func extractSessionFilter(sessionFilter *SessionFilter) (*models.GORMSession, []string) {
@@ -45,14 +44,9 @@ func extractSessionFilter(sessionFilter *SessionFilter) (*models.GORMSession, []
 		args = append(args, "is_delete")
 	}
 
-	if sessionFilter.Discord != nil {
-		sessionQuery.Discord = *sessionFilter.Discord
-		args = append(args, "discord")
-	}
-
-	if sessionFilter.Youtube != nil {
-		sessionQuery.Youtube = *sessionFilter.Youtube
-		args = append(args, "youtube")
+	if sessionFilter.Resources != nil {
+		sessionQuery.Resources = *sessionFilter.Resources
+		args = append(args, "resources")
 	}
 
 	return &sessionQuery, args
@@ -201,12 +195,11 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			user := req.Context().Value(CONTEXT_KEY_USER).(*models.GORMUser)
 
 			newSession := models.GORMSession{
-				UserID:   *sessionFilter.UserID,
-				IsOn:     false,
-				IsDelete: false,
-				Discord:  *sessionFilter.Discord,
-				Youtube:  *sessionFilter.Youtube,
-				User:     *user,
+				UserID:    *sessionFilter.UserID,
+				IsOn:      false,
+				IsDelete:  false,
+				Resources: *sessionFilter.Resources,
+				User:      *user,
 			}
 
 			result := dbApiServer.db.Create(&newSession)
@@ -239,9 +232,8 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			session := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
 
 			updateFilter := &SessionFilter{
-				IsOn:    sessionFilter.IsOn,
-				Discord: sessionFilter.Discord,
-				Youtube: sessionFilter.Youtube,
+				IsOn:      sessionFilter.IsOn,
+				Resources: sessionFilter.Resources,
 			}
 
 			updateSession, args := extractSessionFilter(updateFilter)
