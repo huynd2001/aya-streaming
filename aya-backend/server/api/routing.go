@@ -66,7 +66,6 @@ func inputParsingMiddleware(dataModel any) mux.MiddlewareFunc {
 			case http.MethodGet:
 				reqQuery := req.URL.Query()
 				var decoder = schema.NewDecoder()
-				fmt.Println(req.URL.String())
 				err := decoder.Decode(dataModel, reqQuery)
 				if err != nil {
 					writer.Header().Set("Content-Type", "application/json")
@@ -128,6 +127,7 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 			case errors.Is(err, jwt.ErrTokenMalformed):
 				writer.WriteHeader(http.StatusUnauthorized)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Token malformed!")))
+				return
 			default:
 				fmt.Println(err.Error())
 				writer.WriteHeader(http.StatusInternalServerError)
@@ -136,7 +136,7 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		if !token.Valid {
+		if token == nil || !token.Valid {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusUnauthorized)
 			_, _ = writer.Write([]byte(marshalReturnData(nil, "Invalid token!")))

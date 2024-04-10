@@ -13,11 +13,11 @@ import (
 )
 
 type SessionFilter struct {
-	ID        *uint   `json:"data,omitempty"`
-	UserID    *uint   `json:"user_id,omitempty"`
-	IsOn      *bool   `json:"is_on,omitempty"`
-	IsDelete  *bool   `json:"is_delete,omitempty"`
-	Resources *string `json:"resources,omitempty"`
+	ID        *uint   `json:"id,omitempty" schema:"id"`
+	UserID    *uint   `json:"user_id,omitempty" schema:"user_id"`
+	IsOn      *bool   `json:"is_on,omitempty" schema:"is_on"`
+	IsDelete  *bool   `json:"is_delete,omitempty" schema:"is_delete"`
+	Resources *string `json:"resources,omitempty" schema:"resources"`
 }
 
 func extractSessionFilter(sessionFilter *SessionFilter) (*models.GORMSession, []string) {
@@ -76,13 +76,11 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 				return
 			}
 
-			userQuery := models.GORMUser{
+			user := models.GORMUser{
 				ID: sessionQuery.UserID,
 			}
 
-			user := models.GORMUser{}
-
-			userQueryResult := db.Where(&userQuery, "id").First(&user)
+			userQueryResult := db.First(&user)
 
 			if userQueryResult.Error != nil {
 				writer.Header().Set("Content-Type", "application/json")
@@ -101,16 +99,14 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 				return
 			}
 
-			if !slices.Contains(args, "id") {
+			if slices.Contains(args, "id") {
 				// get the Session content
-				getSessionFilter := models.GORMSession{
+
+				session := models.GORMSession{
 					ID: sessionQuery.ID,
 				}
 
-				session := models.GORMSession{}
-
 				sessionQueryResult := db.
-					Where(&getSessionFilter, "id").
 					First(&session)
 
 				if errors.Is(sessionQueryResult.Error, gorm.ErrRecordNotFound) {
@@ -128,8 +124,8 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 					return
 				}
 
-				sessionUserEmail := session.User.Email
-				if jwtClaimEmail != sessionUserEmail {
+				sessionUserID := session.UserID
+				if user.ID != sessionUserID {
 					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusForbidden)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "User Not Authorize")))
