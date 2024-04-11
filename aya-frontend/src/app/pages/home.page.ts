@@ -10,6 +10,7 @@ import {
   map,
   Observable,
   of,
+  shareReplay,
   Subscription,
   switchMap,
   throwError,
@@ -75,7 +76,9 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    let loginAttempt$ = this.oidcSecurityService.checkAuth();
+    let loginAttempt$ = this.oidcSecurityService
+      .checkAuth()
+      .pipe(shareReplay(1));
 
     this.userInfo$ = loginAttempt$.pipe(
       switchMap((loginResponse) => {
@@ -99,15 +102,18 @@ export default class HomePage implements OnInit, OnDestroy {
         } else {
           throw new Error('No data found');
         }
-      })
+      }),
+      shareReplay(1)
     );
 
     this.isAuth$ = loginAttempt$.pipe(
-      map((loginAttempt) => loginAttempt.isAuthenticated)
+      map((loginAttempt) => loginAttempt.isAuthenticated),
+      shareReplay(1)
     );
 
     this.accessToken$ = loginAttempt$.pipe(
-      map((loginAttempt) => loginAttempt.accessToken)
+      map((loginAttempt) => loginAttempt.accessToken),
+      shareReplay(1)
     );
 
     this.sessionInfo$ = combineLatest([this.userInfo$, this.accessToken$]).pipe(
@@ -126,7 +132,8 @@ export default class HomePage implements OnInit, OnDestroy {
         } else {
           throw new Error('No data found');
         }
-      })
+      }),
+      shareReplay(1)
     );
 
     this.isLoading$ = combineLatest([
@@ -136,7 +143,8 @@ export default class HomePage implements OnInit, OnDestroy {
     ]).pipe(
       map(([loginAttempt, userInfo, sessionsInfo]) => {
         return false;
-      })
+      }),
+      shareReplay(1)
     );
 
     this.sessionInfoSubscription.add(
@@ -207,23 +215,24 @@ export default class HomePage implements OnInit, OnDestroy {
     const dialogRef = this.dialog.open(SessionDialogComponent);
     dialogRef.afterClosed().subscribe((sessionInfoDialog) => {
       if (sessionInfoDialog) {
-        combineLatest([this.accessToken$, this.userInfo$]).subscribe({
-          next: ([accessToken, userInfo]) => {
-            return this.sessionInfoService
-              .newSession$(accessToken, userInfo.ID, sessionInfoDialog)
-              .subscribe({
-                next: (result) => {
-                  console.log(result);
-                },
-                error: (err) => {
-                  console.error(err);
-                },
-              });
-          },
-          error: (err) => {
-            console.error(err);
-          },
-        });
+        combineLatest([this.accessToken$, this.userInfo$])
+          .pipe(
+            switchMap(([accessToken, userInfo]) => {
+              return this.sessionInfoService.newSession$(
+                accessToken,
+                userInfo.ID,
+                sessionInfoDialog
+              );
+            })
+          )
+          .subscribe({
+            next: (value) => {
+              console.log(value);
+            },
+            error: (err) => {
+              console.error(err);
+            },
+          });
       }
     });
   }
