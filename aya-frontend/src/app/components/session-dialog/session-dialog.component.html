@@ -1,0 +1,42 @@
+<mat-dialog-content>
+  <mat-toolbar>
+<span>New Session</span>
+    <button mat-icon-button (click)="pushNewForm()"><mat-icon>add_circle</mat-icon></button>
+
+  </mat-toolbar>
+  <div [formGroup]="sessionFormGroup">
+    <div formArrayName="resources">
+    @for (resource of resources.controls; track $index) {
+      <div [formGroup]="getAsFormGroup(resource)">
+        <mat-form-field>
+          <mat-label>Resource Type</mat-label>
+          <mat-select  formControlName="resourceType">
+            <mat-option value="discord">Discord</mat-option>
+            <mat-option value="youtube">Youtube</mat-option>
+          </mat-select>
+        </mat-form-field>
+        @if (getAsFormGroup(resource).get('resourceType')?.value === 'discord') {
+          <mat-form-field>
+            <mat-label>Guild ID</mat-label>
+            <input matInput formControlName="discordGuildId" required>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Channel ID</mat-label>
+            <input matInput formControlName="discordChannelId" required>
+          </mat-form-field>
+        } @else if (getAsFormGroup(resource).get('resourceType')?.value === 'youtube') {
+          <mat-form-field>
+            <mat-label>Channel ID</mat-label>
+            <input matInput formControlName="youtubeChannelId" required>
+          </mat-form-field>
+        }
+        <button mat-icon-button (click)="deleteForm($index)"><mat-icon>delete</mat-icon></button>
+      </div>
+    }
+    </div>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button (click)="onNoClick()">Cancel</button>
+  <button mat-button [mat-dialog-close]="sessionFormGroup.value" [disabled]="!sessionFormGroup.valid">Submit</button>
+</mat-dialog-actions>

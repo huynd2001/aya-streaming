@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { User } from '../interfaces/user';
+import { UserInfo } from '../interfaces/user';
 import { catchError, Observable, of, switchMap } from 'rxjs';
 
 const userInfoUrl = `/api/user/`;
@@ -13,7 +13,7 @@ export class UserInfoService {
 
   getUserInfo$(accessToken: string, email: string) {
     return this.http
-      .get<{ data?: User; err?: string }>(userInfoUrl, {
+      .get<{ data?: UserInfo; err?: string }>(userInfoUrl, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -22,12 +22,15 @@ export class UserInfoService {
         },
       })
       .pipe(
-        catchError((err: any): Observable<{ data?: User; err?: string }> => {
-          console.error(err);
-          return of({
-            err: String(err),
-          });
-        }),
+        catchError(
+          (err: any): Observable<{ data?: UserInfo; err?: string }> => {
+            console.error(err);
+            return of({
+              data: undefined,
+              err: String(err),
+            });
+          }
+        ),
         switchMap(({ data, err }) => {
           if (!data && err === 'Cannot find the profile') {
             return this.newUser$(accessToken, email);
@@ -43,7 +46,7 @@ export class UserInfoService {
 
   newUser$(accessToken: string, email: string) {
     return this.http
-      .post<{ data?: User; err?: string }>(
+      .post<{ data?: UserInfo; err?: string }>(
         userInfoUrl,
         {
           email: email,
@@ -58,6 +61,7 @@ export class UserInfoService {
         catchError((err: any) => {
           console.error(err);
           return of({
+            data: undefined,
             err: String(err),
           });
         })

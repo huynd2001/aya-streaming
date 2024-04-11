@@ -13,12 +13,10 @@ import (
 )
 
 type SessionFilter struct {
-	ID       *uint   `json:"data,omitempty"`
-	UserID   *uint   `json:"user_id,omitempty"`
-	IsOn     *bool   `json:"is_on,omitempty"`
-	IsDelete *bool   `json:"is_delete,omitempty"`
-	Discord  *string `json:"discord,omitempty"`
-	Youtube  *string `json:"youtube,omitempty"`
+	ID        *uint   `json:"id,omitempty" schema:"id"`
+	UserID    *uint   `json:"user_id,omitempty" schema:"user_id"`
+	IsOn      *bool   `json:"is_on,omitempty" schema:"is_on"`
+	Resources *string `json:"resources,omitempty" schema:"resources"`
 }
 
 func extractSessionFilter(sessionFilter *SessionFilter) (*models.GORMSession, []string) {
@@ -40,19 +38,9 @@ func extractSessionFilter(sessionFilter *SessionFilter) (*models.GORMSession, []
 		args = append(args, "is_on")
 	}
 
-	if sessionFilter.IsDelete != nil {
-		sessionQuery.IsDelete = *sessionFilter.IsDelete
-		args = append(args, "is_delete")
-	}
-
-	if sessionFilter.Discord != nil {
-		sessionQuery.Discord = *sessionFilter.Discord
-		args = append(args, "discord")
-	}
-
-	if sessionFilter.Youtube != nil {
-		sessionQuery.Youtube = *sessionFilter.Youtube
-		args = append(args, "youtube")
+	if sessionFilter.Resources != nil {
+		sessionQuery.Resources = *sessionFilter.Resources
+		args = append(args, "resources")
 	}
 
 	return &sessionQuery, args
@@ -82,13 +70,11 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 				return
 			}
 
-			userQuery := models.GORMUser{
+			user := models.GORMUser{
 				ID: sessionQuery.UserID,
 			}
 
-			user := models.GORMUser{}
-
-			userQueryResult := db.Where(&userQuery, "id").First(&user)
+			userQueryResult := db.First(&user)
 
 			if userQueryResult.Error != nil {
 				writer.Header().Set("Content-Type", "application/json")
@@ -107,16 +93,14 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 				return
 			}
 
-			if !slices.Contains(args, "id") {
+			if slices.Contains(args, "id") {
 				// get the Session content
-				getSessionFilter := models.GORMSession{
+
+				session := models.GORMSession{
 					ID: sessionQuery.ID,
 				}
 
-				session := models.GORMSession{}
-
 				sessionQueryResult := db.
-					Where(&getSessionFilter, "id").
 					First(&session)
 
 				if errors.Is(sessionQueryResult.Error, gorm.ErrRecordNotFound) {
@@ -134,8 +118,8 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 					return
 				}
 
-				sessionUserEmail := session.User.Email
-				if jwtClaimEmail != sessionUserEmail {
+				sessionUserID := session.UserID
+				if user.ID != sessionUserID {
 					writer.Header().Set("Content-Type", "application/json")
 					writer.WriteHeader(http.StatusForbidden)
 					_, _ = writer.Write([]byte(marshalReturnData(nil, "User Not Authorize")))
@@ -201,12 +185,10 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			user := req.Context().Value(CONTEXT_KEY_USER).(*models.GORMUser)
 
 			newSession := models.GORMSession{
-				UserID:   *sessionFilter.UserID,
-				IsOn:     false,
-				IsDelete: false,
-				Discord:  *sessionFilter.Discord,
-				Youtube:  *sessionFilter.Youtube,
-				User:     *user,
+				UserID:    *sessionFilter.UserID,
+				IsOn:      false,
+				Resources: *sessionFilter.Resources,
+				User:      *user,
 			}
 
 			result := dbApiServer.db.Create(&newSession)
@@ -239,9 +221,8 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			session := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
 
 			updateFilter := &SessionFilter{
-				IsOn:    sessionFilter.IsOn,
-				Discord: sessionFilter.Discord,
-				Youtube: sessionFilter.Youtube,
+				IsOn:      sessionFilter.IsOn,
+				Resources: sessionFilter.Resources,
 			}
 
 			updateSession, args := extractSessionFilter(updateFilter)
@@ -279,13 +260,8 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			session := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
 
-			updateSession := &models.GORMSession{
-				IsDelete: true,
-			}
-
 			sessionResult := dbApiServer.db.
-				Model(&session).
-				Updates(&updateSession)
+				Delete(&session)
 
 			if sessionResult.Error != nil {
 				fmt.Println(sessionResult.Error.Error())

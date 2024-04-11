@@ -1,17 +1,28 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { MatToolbar } from '@angular/material/toolbar';
-import { MatIcon } from '@angular/material/icon';
+import { MatIcon, MatIconRegistry } from '@angular/material/icon';
 import { MatButton, MatIconButton } from '@angular/material/button';
-import {
-  EventTypes,
-  OidcSecurityService,
-  PublicEventsService,
-} from 'angular-auth-oidc-client';
+import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatList, MatListItem } from '@angular/material/list';
-import { filter, map, Subscription, switchMap, throwError } from 'rxjs';
+import {
+  combineLatest,
+  map,
+  Observable,
+  of,
+  shareReplay,
+  Subscription,
+  switchMap,
+  throwError,
+} from 'rxjs';
 import { UserInfoService } from '../services/user-info.service';
-import { User } from '../interfaces/user';
+import { UserInfo } from '../interfaces/user';
+import { DomSanitizer } from '@angular/platform-browser';
+import { MatDialog } from '@angular/material/dialog';
+import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
+import { SessionInfoService } from '../services/session-info.service';
+import { SessionInfo } from '../interfaces/session';
+import { MatCard, MatCardContent, MatCardHeader } from '@angular/material/card';
 
 @Component({
   selector: 'app-home',
@@ -26,92 +37,142 @@ import { User } from '../interfaces/user';
     MatMenuItem,
     MatListItem,
     MatButton,
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
   ],
   templateUrl: 'home.page.html',
   styleUrl: 'home.page.css',
 })
 export default class HomePage implements OnInit, OnDestroy {
   public isAuth: boolean = false;
-  public userInfo: User | undefined;
+  public userInfo: UserInfo | undefined;
   public isLoading: boolean = true;
+  public sessionInfo: SessionInfo[] | undefined;
+
+  private isAuth$: Observable<boolean> = of(false);
+  private userInfo$: Observable<UserInfo> = of({ ID: 0, Email: '' });
+  private isLoading$: Observable<boolean> = of(true);
+  private sessionInfo$: Observable<SessionInfo[]> = of([]);
+  private accessToken$: Observable<string> = of('');
 
   private authSubscription: Subscription = new Subscription();
   private userInfoSubscription: Subscription = new Subscription();
   private isLoadingSubscription: Subscription = new Subscription();
+  private sessionInfoSubscription: Subscription = new Subscription();
 
   private readonly oidcSecurityService = inject(OidcSecurityService);
-  private readonly eventService = inject(PublicEventsService);
   private readonly userInfoService = inject(UserInfoService);
+  private readonly sessionInfoService = inject(SessionInfoService);
+  private readonly matIconRegistry = inject(MatIconRegistry);
+  private readonly domSanitizer = inject(DomSanitizer);
+  private readonly dialog = inject(MatDialog);
+
+  constructor() {
+    this.matIconRegistry.addSvgIcon(
+      `aya_logo`,
+      this.domSanitizer.bypassSecurityTrustResourceUrl('/aya.svg')
+    );
+  }
 
   ngOnInit(): void {
-    let userInfo$ = this.oidcSecurityService
+    let loginAttempt$ = this.oidcSecurityService
       .checkAuth()
-      .pipe(
-        switchMap((loginResponse) => {
-          if (loginResponse.userData && loginResponse.accessToken) {
-            let email = loginResponse.userData['email'];
-            return this.userInfoService.getUserInfo$(
-              loginResponse.accessToken,
-              email
-            );
-          } else {
-            return throwError(
-              () => new Error('No user data yet. Please log in!')
-            );
-          }
-        })
-      )
-      .pipe(
-        map(({ data, err }) => {
-          if (err) {
-            throw new Error(err);
-          } else if (data) {
-            return data;
-          } else {
-            throw new Error('No data found');
-          }
-        })
-      );
+      .pipe(shareReplay(1));
 
-    let isAuth$ = this.oidcSecurityService.isAuthenticated$.pipe(
-      map((authResult) => authResult.isAuthenticated)
+    this.userInfo$ = loginAttempt$.pipe(
+      switchMap((loginResponse) => {
+        if (loginResponse.userData && loginResponse.accessToken) {
+          let email = loginResponse.userData['email'];
+          return this.userInfoService.getUserInfo$(
+            loginResponse.accessToken,
+            email
+          );
+        } else {
+          return throwError(
+            () => new Error('No user data yet. Please log in!')
+          );
+        }
+      }),
+      map(({ data, err }) => {
+        if (err) {
+          throw new Error(err);
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('No data found');
+        }
+      }),
+      shareReplay(1)
     );
 
-    let isLoading$ = this.eventService.registerForEvents().pipe(
-      filter(
-        (event) =>
-          event.type === EventTypes.CheckingAuth ||
-          event.type === EventTypes.CheckingAuthFinished ||
-          event.type === EventTypes.CheckingAuthFinishedWithError
-      ),
-      map((event) => {
-        switch (event.type) {
-          case EventTypes.CheckingAuth:
-            return true;
-          case EventTypes.CheckingAuthFinishedWithError:
-            return false;
-          case EventTypes.CheckingAuthFinished:
-            return false;
-          default:
-            return true;
+    this.isAuth$ = loginAttempt$.pipe(
+      map((loginAttempt) => loginAttempt.isAuthenticated),
+      shareReplay(1)
+    );
+
+    this.accessToken$ = loginAttempt$.pipe(
+      map((loginAttempt) => loginAttempt.accessToken),
+      shareReplay(1)
+    );
+
+    this.sessionInfo$ = combineLatest([this.userInfo$, this.accessToken$]).pipe(
+      switchMap(([userInfo, accessToken]) => {
+        console.log('get all session?');
+        return this.sessionInfoService.getAllSessions$(
+          accessToken,
+          userInfo.ID
+        );
+      }),
+      map(({ data, err }) => {
+        if (err) {
+          throw new Error(err);
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('No data found');
         }
+      }),
+      shareReplay(1)
+    );
+
+    this.isLoading$ = combineLatest([
+      loginAttempt$,
+      this.userInfo$,
+      this.sessionInfo$,
+    ]).pipe(
+      map(([loginAttempt, userInfo, sessionsInfo]) => {
+        return false;
+      }),
+      shareReplay(1)
+    );
+
+    this.sessionInfoSubscription.add(
+      this.sessionInfo$.subscribe({
+        next: (sessionsInfo) => {
+          this.sessionInfo = sessionsInfo;
+        },
+        error: (err) => {
+          console.error('Cannot retrieve session info from backend');
+          console.error(err);
+        },
       })
     );
 
     this.userInfoSubscription.add(
-      userInfo$.subscribe({
+      this.userInfo$.subscribe({
         next: (userInfo) => {
           this.userInfo = userInfo;
         },
         error: (err) => {
-          console.log('lmao');
+          console.error('Cannot retrieve user info from backend');
           console.error(err);
         },
       })
     );
 
     this.authSubscription.add(
-      isAuth$.subscribe({
+      this.isAuth$.subscribe({
         next: (isAuth) => {
           this.isAuth = isAuth;
         },
@@ -122,7 +183,7 @@ export default class HomePage implements OnInit, OnDestroy {
     );
 
     this.isLoadingSubscription.add(
-      isLoading$.subscribe({
+      this.isLoading$.subscribe({
         next: (isLoading) => {
           this.isLoading = isLoading;
         },
@@ -147,5 +208,34 @@ export default class HomePage implements OnInit, OnDestroy {
     this.authSubscription.unsubscribe();
     this.userInfoSubscription.unsubscribe();
     this.isLoadingSubscription.unsubscribe();
+    this.sessionInfoSubscription.unsubscribe();
   }
+
+  openDialog() {
+    const dialogRef = this.dialog.open(SessionDialogComponent);
+    dialogRef.afterClosed().subscribe((sessionInfoDialog) => {
+      if (sessionInfoDialog) {
+        combineLatest([this.accessToken$, this.userInfo$])
+          .pipe(
+            switchMap(([accessToken, userInfo]) => {
+              return this.sessionInfoService.newSession$(
+                accessToken,
+                userInfo.ID,
+                sessionInfoDialog
+              );
+            })
+          )
+          .subscribe({
+            next: (value) => {
+              console.log(value);
+            },
+            error: (err) => {
+              console.error(err);
+            },
+          });
+      }
+    });
+  }
+
+  protected readonly open = open;
 }

@@ -1,13 +1,13 @@
 
 <div class="home-page">
   <mat-toolbar>
-    <button mat-icon-button class="example-icon" aria-label="Example icon-button with menu icon">
-      <mat-icon>menu</mat-icon>
+    <button mat-icon-button class="icon" aria-label="New session" (click)="openDialog()">
+      <mat-icon class="icon-inside-button" svgIcon="aya_logo"></mat-icon>
     </button>
     <span>Aya~</span>
     <span class="example-spacer"></span>
-    <button mat-icon-button [matMenuTriggerFor]="loginMenu" class="example-icon favorite-icon" aria-label="Example icon-button with heart icon">
-      <mat-icon>more_vert</mat-icon>
+    <button mat-icon-button [matMenuTriggerFor]="loginMenu" class="icon" aria-label="Login">
+      <mat-icon class="icon-inside-button">more_vert</mat-icon>
     </button>
     <mat-menu #loginMenu="matMenu">
 
@@ -30,4 +30,12 @@
       </mat-list>
     </mat-menu>
   </mat-toolbar>
+  @if (sessionInfo) {
+    @for (session of sessionInfo; track $index) {
+      <mat-card>
+        <mat-card-header>Session ID: {{session.ID}}</mat-card-header>
+        <mat-card-content>Session Resources: {{session.Resources}}</mat-card-content>
+      </mat-card>
+    }
+  }
 </div>

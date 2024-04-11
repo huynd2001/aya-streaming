@@ -12,8 +12,8 @@ import (
 )
 
 type UserFilter struct {
-	ID    *uint   `json:"id,omitempty"`
-	Email *string `json:"email,omitempty"`
+	ID    *uint   `json:"id,omitempty" schema:"id"`
+	Email *string `json:"email,omitempty" schema:"email"`
 }
 
 func extractUserFilter(userFilter *UserFilter) (*models.GORMUser, []string) {
@@ -108,6 +108,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 				return
 			}
 
+			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
 			return
