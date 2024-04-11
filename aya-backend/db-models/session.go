@@ -2,17 +2,13 @@ package models
 
 import (
 	"gorm.io/gorm"
-	"time"
 )
 
 type GORMSession struct {
 	gorm.Model
 	ID        uint
 	Resources string
-	CreateAt  time.Time
-	UpdateAt  time.Time
 	IsOn      bool
-	IsDelete  bool
 	UserID    uint
 	User      GORMUser `gorm:"references:ID"`
 }

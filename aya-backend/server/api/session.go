@@ -16,7 +16,6 @@ type SessionFilter struct {
 	ID        *uint   `json:"id,omitempty" schema:"id"`
 	UserID    *uint   `json:"user_id,omitempty" schema:"user_id"`
 	IsOn      *bool   `json:"is_on,omitempty" schema:"is_on"`
-	IsDelete  *bool   `json:"is_delete,omitempty" schema:"is_delete"`
 	Resources *string `json:"resources,omitempty" schema:"resources"`
 }
 
@@ -37,11 +36,6 @@ func extractSessionFilter(sessionFilter *SessionFilter) (*models.GORMSession, []
 	if sessionFilter.IsOn != nil {
 		sessionQuery.IsOn = *sessionFilter.IsOn
 		args = append(args, "is_on")
-	}
-
-	if sessionFilter.IsDelete != nil {
-		sessionQuery.IsDelete = *sessionFilter.IsDelete
-		args = append(args, "is_delete")
 	}
 
 	if sessionFilter.Resources != nil {
@@ -193,7 +187,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			newSession := models.GORMSession{
 				UserID:    *sessionFilter.UserID,
 				IsOn:      false,
-				IsDelete:  false,
 				Resources: *sessionFilter.Resources,
 				User:      *user,
 			}
@@ -267,13 +260,8 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 			session := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
 
-			updateSession := &models.GORMSession{
-				IsDelete: true,
-			}
-
 			sessionResult := dbApiServer.db.
-				Model(&session).
-				Updates(&updateSession)
+				Delete(&session)
 
 			if sessionResult.Error != nil {
 				fmt.Println(sessionResult.Error.Error())
