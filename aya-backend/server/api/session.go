@@ -139,7 +139,9 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 
 func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
-	r.Use(inputParsingMiddleware(&SessionFilter{}))
+	r.Use(inputParsingMiddleware(func() any {
+		return &SessionFilter{}
+	}))
 	r.Use(authSessionOwnerMiddleware(dbApiServer.db))
 
 	r.PathPrefix("/").
