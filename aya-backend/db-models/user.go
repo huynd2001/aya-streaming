@@ -6,5 +6,5 @@ type GORMUser struct {
 	gorm.Model
 	ID       uint
 	Username string `gorm:"unique"`
-	Email    string
+	Email    string `gorm:"unique"`
 }
