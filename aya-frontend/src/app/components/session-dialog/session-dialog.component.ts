@@ -1,4 +1,4 @@
-import { Component, inject, Input } from '@angular/core';
+import { Component, Inject, inject, Input, OnInit } from '@angular/core';
 import { MatFormField } from '@angular/material/form-field';
 import {
   AbstractControl,
@@ -15,16 +15,18 @@ import {
 import { MatInput, MatInputModule } from '@angular/material/input';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import {
+  MAT_DIALOG_DATA,
   MatDialogActions,
   MatDialogClose,
   MatDialogContent,
+  MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
 import { Validators } from '@angular/forms';
-import { ValidationError } from '@nx/angular/src/generators/ng-add/utilities';
+import { SessionDialogInfo } from '../../interfaces/session';
 
 const sessionValidator: ValidatorFn = (
   control: AbstractControl
@@ -85,13 +87,18 @@ const sessionValidator: ValidatorFn = (
   templateUrl: 'session-dialog.component.html',
   styleUrl: 'session-dialog.component.css',
 })
-export class SessionDialogComponent {
-  @Input() sessionID: number | undefined;
+export class SessionDialogComponent implements OnInit {
+  constructor(
+    public dialogRef: MatDialogRef<SessionDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: SessionDialogInfo
+  ) {}
 
   private readonly formBuilder = inject(FormBuilder);
 
   sessionFormGroup = new FormGroup({
-    resources: new FormArray([]),
+    resources: new FormArray([], {
+      validators: [Validators.maxLength(3), Validators.minLength(0)],
+    }),
   });
 
   get resources() {
@@ -103,21 +110,19 @@ export class SessionDialogComponent {
       new FormGroup(
         {
           resourceType: new FormControl('discord'),
-          discordChannelId: new FormControl('', {
-            validators: [Validators.required],
-          }),
-          discordGuildId: new FormControl('', {
-            validators: [Validators.required],
-          }),
-          youtubeChannelId: new FormControl('', {
-            validators: [Validators.required],
-          }),
+          discordChannelId: new FormControl(''),
+          discordGuildId: new FormControl(''),
+          youtubeChannelId: new FormControl(''),
         },
         {
           validators: [sessionValidator],
         }
       )
     );
+  }
+
+  onNoClick() {
+    this.dialogRef.close();
   }
 
   deleteForm(id: number) {
@@ -134,4 +139,9 @@ export class SessionDialogComponent {
   getAsFormRecord(form: AbstractControl) {
     return form as FormRecord;
   }
+
+  protected readonly String = String;
+  protected readonly Validators = Validators;
+
+  ngOnInit(): void {}
 }

@@ -7,12 +7,11 @@ import {
   trigger,
 } from '@angular/animations';
 import { DisplayMessage } from '../../interfaces/message';
-import { NgForOf, NgIf, NgOptimizedImage } from '@angular/common';
 
 @Component({
   selector: 'app-message',
   standalone: true,
-  imports: [NgForOf, NgIf, NgOptimizedImage],
+  imports: [],
   templateUrl: 'message.component.html',
   styleUrl: 'message.component.css',
   animations: [
