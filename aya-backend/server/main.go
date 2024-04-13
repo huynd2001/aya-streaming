@@ -128,7 +128,7 @@ func main() {
 	go func() {
 		for {
 			select {
-			case msg := <-msgC:
+			case msg := <-*msgC:
 				fmt.Printf("%#v\n", msg)
 				sendMessage(wsServer.ChanMap, msg)
 			case _ = <-sc:

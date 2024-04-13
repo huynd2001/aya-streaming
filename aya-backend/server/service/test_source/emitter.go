@@ -8,15 +8,15 @@ import (
 
 type TestEmitter struct {
 	ChatEmitter
-	updateEmitter chan MessageUpdate
+	updateEmitter *chan MessageUpdate
 }
 
-func (testEmitter *TestEmitter) UpdateEmitter() chan MessageUpdate {
+func (testEmitter *TestEmitter) UpdateEmitter() *chan MessageUpdate {
 	return testEmitter.updateEmitter
 }
 
 func (testEmitter *TestEmitter) CloseEmitter() error {
-	// TODO: work on something?
+	close(*testEmitter.updateEmitter)
 	return nil
 }
 
@@ -28,8 +28,8 @@ func NewEmitter() *TestEmitter {
 		i := 0
 		for {
 			messageUpdates <- MessageUpdate{
-
-				Update: New,
+				UpdateTime: time.Now(),
+				Update:     New,
 				Message: Message{
 					Source: TestSource,
 					Id:     fmt.Sprintf("%d", i),
@@ -52,7 +52,8 @@ func NewEmitter() *TestEmitter {
 				a := i
 				time.Sleep(1 * time.Second * 30)
 				messageUpdates <- MessageUpdate{
-					Update: Delete,
+					UpdateTime: time.Now(),
+					Update:     Delete,
 					Message: Message{
 						Source: TestSource,
 						Id:     fmt.Sprintf("%d", a),
@@ -76,7 +77,7 @@ func NewEmitter() *TestEmitter {
 	fmt.Println("New Test Emitter created!")
 
 	return &TestEmitter{
-		updateEmitter: messageUpdates,
+		updateEmitter: &messageUpdates,
 	}
 
 }

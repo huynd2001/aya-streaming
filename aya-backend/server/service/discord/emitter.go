@@ -9,15 +9,16 @@ import (
 
 type DiscordEmitter struct {
 	service.ChatEmitter
-	updateEmitter chan service.MessageUpdate
+	updateEmitter *chan service.MessageUpdate
 	discordClient *dg.Session
 }
 
-func (discordEmitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (discordEmitter *DiscordEmitter) UpdateEmitter() *chan service.MessageUpdate {
 	return discordEmitter.updateEmitter
 }
 
 func (discordEmitter *DiscordEmitter) CloseEmitter() error {
+	close(*discordEmitter.updateEmitter)
 	return discordEmitter.discordClient.Close()
 }
 
@@ -49,7 +50,8 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 		if m.GuildID == guildId && m.ChannelID == channelId {
 
 			messageUpdates <- service.MessageUpdate{
-				Update: service.New,
+				UpdateTime: m.Timestamp,
+				Update:     service.New,
 				Message: service.Message{
 					Source:       service.Discord,
 					Id:           m.ID,
@@ -65,7 +67,8 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 		if m.GuildID == guildId && m.ChannelID == channelId {
 
 			messageUpdates <- service.MessageUpdate{
-				Update: service.Delete,
+				UpdateTime: m.Timestamp,
+				Update:     service.Delete,
 				Message: service.Message{
 					Source: service.Discord,
 					Id:     m.ID,
@@ -78,7 +81,8 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 		if m.GuildID == guildId && m.ChannelID == channelId {
 
 			messageUpdates <- service.MessageUpdate{
-				Update: service.Edit,
+				UpdateTime: m.Timestamp,
+				Update:     service.Edit,
 				Message: service.Message{
 					Source:       service.Discord,
 					Id:           m.ID,
@@ -99,6 +103,6 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 
 	return &DiscordEmitter{
 		discordClient: client,
-		updateEmitter: messageUpdates,
+		updateEmitter: &messageUpdates,
 	}, nil
 }

@@ -18,17 +18,15 @@ type YoutubeEmitterConfig struct {
 type YoutubeEmitter struct {
 	service.ChatEmitter
 	youtubeService *yt.Service
-	updateEmitter  chan service.MessageUpdate
+	updateEmitter  *chan service.MessageUpdate
 }
 
-func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() *chan service.MessageUpdate {
 	return youtubeEmitter.updateEmitter
 }
 
 func (youtubeEmitter *YoutubeEmitter) CloseEmitter() error {
-	// TODO: Implement the closing of the message channel
-	// Probably not needed tho, but in the future might used this to shut down the
-	// oauth2.0 flow
+	close(*youtubeEmitter.updateEmitter)
 	return nil
 }
 
@@ -100,9 +98,15 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 			waitUntilTimeStamp := time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
 			for _, item := range response.Items {
 				if item != nil && item.Snippet != nil {
+					publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
+					if err != nil {
+						fmt.Println("sup")
+						publishedTime = time.Now()
+					}
 					messageUpdates <- service.MessageUpdate{
-						Update:  service.New,
-						Message: ytParser.ParseMessage(item),
+						UpdateTime: publishedTime,
+						Update:     service.New,
+						Message:    ytParser.ParseMessage(item),
 					}
 				}
 			}
@@ -123,6 +127,6 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 
 	return &YoutubeEmitter{
 		youtubeService: ytService,
-		updateEmitter:  messageUpdates,
+		updateEmitter:  &messageUpdates,
 	}, nil
 }

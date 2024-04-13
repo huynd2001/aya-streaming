@@ -20,6 +20,8 @@ type MessagesChannel struct {
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
+
+	updateEmitter *chan service.MessageUpdate
 }
 
 type MessageChannelConfig struct {
@@ -28,42 +30,13 @@ type MessageChannelConfig struct {
 	Youtube bool
 }
 
-func (messageChannel MessagesChannel) UpdateEmitter() chan service.MessageUpdate {
-	msgC := make(chan service.MessageUpdate)
-
-	if messageChannel.testEmitter != nil {
-		go func() {
-			for {
-				testMsg := <-messageChannel.testEmitter.UpdateEmitter()
-				fmt.Println("Message from test source!")
-				msgC <- testMsg
-			}
-		}()
-	}
-
-	if messageChannel.discordEmitter != nil {
-		go func() {
-			for {
-				discordMsg := <-messageChannel.discordEmitter.UpdateEmitter()
-				fmt.Println("Message from discord!")
-				msgC <- discordMsg
-			}
-		}()
-	}
-
-	if messageChannel.youtubeEmitter != nil {
-		go func() {
-			for {
-				ytMsg := <-messageChannel.youtubeEmitter.UpdateEmitter()
-				fmt.Println("Message from youtube!")
-				msgC <- ytMsg
-			}
-		}()
-	}
-	return msgC
+func (messageChannel MessagesChannel) UpdateEmitter() *chan service.MessageUpdate {
+	return messageChannel.updateEmitter
 }
 
 func (messageChannel MessagesChannel) CloseEmitter() error {
+
+	close(*messageChannel.updateEmitter)
 
 	var testError error = nil
 	var discordError error = nil
@@ -92,7 +65,7 @@ func (messageChannel MessagesChannel) CloseEmitter() error {
 
 func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 
-	msgChannel := MessagesChannel{
+	messageChannel := MessagesChannel{
 		testEmitter:    nil,
 		discordEmitter: nil,
 		youtubeEmitter: nil,
@@ -106,12 +79,12 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 			fmt.Printf("Error during creating a discord emitter: %s\n", err.Error())
 		}
 
-		msgChannel.discordEmitter = discordEmitter
+		messageChannel.discordEmitter = discordEmitter
 	}
 
 	if settings.Test {
 		testEmitter := test_source.NewEmitter()
-		msgChannel.testEmitter = testEmitter
+		messageChannel.testEmitter = testEmitter
 	}
 
 	if settings.Youtube {
@@ -123,8 +96,41 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 		if err != nil {
 			fmt.Printf("Error during creating a youtube emitter: %s\n", err.Error())
 		}
-		msgChannel.youtubeEmitter = youtubeEmitter
+		messageChannel.youtubeEmitter = youtubeEmitter
 	}
 
-	return &msgChannel
+	msgC := make(chan service.MessageUpdate)
+
+	if messageChannel.testEmitter != nil {
+		go func() {
+			for {
+				testMsg := <-*messageChannel.testEmitter.UpdateEmitter()
+				fmt.Println("Message from test source!")
+				msgC <- testMsg
+			}
+		}()
+	}
+
+	if messageChannel.discordEmitter != nil {
+		go func() {
+			for {
+				discordMsg := <-*messageChannel.discordEmitter.UpdateEmitter()
+				fmt.Println("Message from discord!")
+				msgC <- discordMsg
+			}
+		}()
+	}
+
+	if messageChannel.youtubeEmitter != nil {
+		go func() {
+			for {
+				ytMsg := <-*messageChannel.youtubeEmitter.UpdateEmitter()
+				fmt.Println("Message from youtube!")
+				msgC <- ytMsg
+			}
+		}()
+	}
+	messageChannel.updateEmitter = &msgC
+
+	return &messageChannel
 }

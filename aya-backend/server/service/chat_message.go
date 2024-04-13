@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type Source int
@@ -141,6 +142,7 @@ type Author struct {
 }
 
 type MessageUpdate struct {
-	Update  Update  `json:"update"`
-	Message Message `json:"message"`
+	UpdateTime time.Time `json:"updateTime"`
+	Update     Update    `json:"update"`
+	Message    Message   `json:"message"`
 }
