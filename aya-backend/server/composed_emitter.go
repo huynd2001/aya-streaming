@@ -118,8 +118,9 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 		youtubeEmitter, err := youtubesource.NewEmitter(ytEmitterConfig)
 		if err != nil {
 			fmt.Printf("Error during creating a youtube emitter: %s\n", err.Error())
+		} else {
+			messageChannel.youtubeEmitter = youtubeEmitter
 		}
-		messageChannel.youtubeEmitter = youtubeEmitter
 	}
 
 	msgC := make(chan service.MessageUpdate)

@@ -167,9 +167,10 @@ func SetupAsync(config *YoutubeEmitterConfig, ytEmitter *YoutubeEmitter) {
 				if item != nil && item.Snippet != nil {
 					publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
 					if err != nil {
-						fmt.Println("sup")
+						fmt.Println("Error when parsing time in chat. Opt for current Time")
 						publishedTime = time.Now()
 					}
+					fmt.Println(publishedTime.Format(time.RFC822Z))
 					*ytEmitter.UpdateEmitter() <- service.MessageUpdate{
 						UpdateTime: publishedTime,
 						Update:     service.New,
@@ -196,7 +197,7 @@ func SetupAsync(config *YoutubeEmitterConfig, ytEmitter *YoutubeEmitter) {
 
 // NewEmitter create a new YouTube emitter. Note that this blocks until the oauth key is
 // retrieved from the workflow.
-func NewEmitter(config *YoutubeEmitterConfig) *YoutubeEmitter {
+func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 
 	messageUpdates := make(chan service.MessageUpdate)
 	errorCh := make(chan error)
@@ -210,5 +211,5 @@ func NewEmitter(config *YoutubeEmitterConfig) *YoutubeEmitter {
 		SetupAsync(config, &youtubeEmitter)
 	}()
 
-	return &youtubeEmitter
+	return &youtubeEmitter, nil
 }
