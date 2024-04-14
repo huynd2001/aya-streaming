@@ -45,163 +45,170 @@ func (youtubeEmitter *YoutubeEmitter) ErrorEmitter() chan error {
 	return youtubeEmitter.errorEmitter
 }
 
-// NewEmitter create a new YouTube emitter. Note that this blocks until the oauth key is
-// retrieved from the workflow.
-// TODO: make the error return a channel instead to listen to error handling
-func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
-
-	messageUpdates := make(chan service.MessageUpdate)
-	errorCh := make(chan error)
+func SetupAsync(config *YoutubeEmitterConfig, ytEmitter *YoutubeEmitter) {
 
 	var ytService *yt.Service
 	var err error
 	ctx := context.Background()
+	// waits until we finish our setup
+	if config.UseOAuth {
 
-	go func() {
-		// waits until we finish our setup
-		if config.UseOAuth {
+		fmt.Println("Using OAuth")
+		// resolves the token workflow
+		workflow := auth.NewWorkflow()
 
-			fmt.Println("Using OAuth")
-			// resolves the token workflow
-			workflow := auth.NewWorkflow()
+		// Configure an OpenID Connect aware OAuth2 client.
+		oauth2Config := oauth2.Config{
+			ClientID:     config.ClientID,
+			ClientSecret: config.ClientSecret,
+			RedirectURL:  fmt.Sprintf("%s/youtube.callback", config.RedirectBasedUrl),
 
-			// Configure an OpenID Connect aware OAuth2 client.
-			oauth2Config := oauth2.Config{
-				ClientID:     config.ClientID,
-				ClientSecret: config.ClientSecret,
-				RedirectURL:  fmt.Sprintf("%s/youtube.callback", config.RedirectBasedUrl),
+			// Discovery returns the OAuth2 endpoints.
+			Endpoint: google.Endpoint,
 
-				// Discovery returns the OAuth2 endpoints.
-				Endpoint: google.Endpoint,
+			// "openid" is a required scope for OpenID Connect flows.
+			Scopes: []string{yt.YoutubeScope},
+		}
 
-				// "openid" is a required scope for OpenID Connect flows.
-				Scopes: []string{yt.YoutubeScope},
-			}
+		workflow.SetUpRedirectAndCodeChallenge(
+			config.Router.PathPrefix("/youtube.redirect").Subrouter(),
+			config.Router.PathPrefix("/youtube.callback").Subrouter(),
+		)
+		workflow.SetupAuth(
+			oauth2Config,
+			fmt.Sprintf("%s/youtube.redirect", config.RedirectBasedUrl),
+		)
 
-			workflow.SetUpRedirectAndCodeChallenge(
-				config.Router.PathPrefix("/youtube.redirect").Subrouter(),
-				config.Router.PathPrefix("/youtube.callback").Subrouter(),
-			)
-			workflow.SetupAuth(
-				oauth2Config,
-				fmt.Sprintf("%s/youtube.redirect", config.RedirectBasedUrl),
-			)
+		// Await for the tokenSource from the workflow channel
+		tokenSource := <-workflow.TokenSourceCh()
 
-			// Await for the tokenSource from the workflow channel
-			tokenSource := <-workflow.TokenSourceCh()
-
-			ytService, err = yt.NewService(ctx, option.WithTokenSource(tokenSource))
-			if err != nil {
-				errorCh <- err
-				return
-			}
-
-		} else if config.UseApiKey {
-			fmt.Println("Using API key")
-			ytService, err = yt.NewService(ctx, option.WithAPIKey(config.ApiKey))
-			if err != nil {
-				errorCh <- err
-				return
-			}
-		} else {
-			errorCh <- fmt.Errorf("cannot setup youtube service")
+		ytService, err = yt.NewService(ctx, option.WithTokenSource(tokenSource))
+		if err != nil {
+			ytEmitter.ErrorEmitter() <- err
 			return
 		}
 
-		// TODO: work with database to retrieve the Youtube URL
-		channelId := os.Getenv("TEST_YT_CHANNEL_ID")
-		if channelId == "" {
-			errorCh <- fmt.Errorf("env variable TEST_UT_CHANNEL_ID not found")
+	} else if config.UseApiKey {
+		fmt.Println("Using API key")
+		ytService, err = yt.NewService(ctx, option.WithAPIKey(config.ApiKey))
+		if err != nil {
+			ytEmitter.ErrorEmitter() <- err
 			return
 		}
+	} else {
+		ytEmitter.ErrorEmitter() <- fmt.Errorf("cannot setup youtube service")
+		return
+	}
 
-		if ytService == nil {
-			errorCh <- fmt.Errorf("cannot setup youtube service from the config")
-			return
-		}
+	// TODO: work with database to retrieve the Youtube URL
+	channelId := os.Getenv("TEST_YT_CHANNEL_ID")
+	if channelId == "" {
+		ytEmitter.ErrorEmitter() <- fmt.Errorf("env variable TEST_UT_CHANNEL_ID not found")
+		return
+	}
 
-		searchRes, err := ytService.Search.
-			List([]string{"id"}).
-			ChannelId(channelId).
-			EventType("live").
-			Type("video").
+	if ytService == nil {
+		ytEmitter.ErrorEmitter() <- fmt.Errorf("cannot setup youtube service from the config")
+		return
+	}
+
+	searchRes, err := ytService.Search.
+		List([]string{"id"}).
+		ChannelId(channelId).
+		EventType("live").
+		Type("video").
+		Do()
+	if err != nil {
+		ytEmitter.ErrorEmitter() <- err
+		return
+	}
+
+	if len(searchRes.Items) == 0 {
+		ytEmitter.ErrorEmitter() <- fmt.Errorf("no live videos found for channel %s", channelId)
+		return
+	}
+
+	videoId := searchRes.Items[0].Id.VideoId
+
+	videoService := yt.NewVideosService(ytService)
+
+	videoRes, err :=
+		videoService.
+			List([]string{"liveStreamingDetails"}).
+			Id(videoId).
 			Do()
-		if err != nil {
-			errorCh <- err
-			return
-		}
 
-		if len(searchRes.Items) == 0 {
-			errorCh <- fmt.Errorf("no live videos found for channel %s", channelId)
-			return
-		}
+	if err != nil {
+		ytEmitter.ErrorEmitter() <- err
+		return
+	}
 
-		videoId := searchRes.Items[0].Id.VideoId
+	liveChatId := ""
 
-		videoService := yt.NewVideosService(ytService)
+	for _, item := range videoRes.Items {
+		liveChatId = item.LiveStreamingDetails.ActiveLiveChatId
+	}
+	if liveChatId == "" {
+		ytEmitter.ErrorEmitter() <- fmt.Errorf("the live has ended")
+		return
+	}
 
-		videoRes, err :=
-			videoService.
-				List([]string{"liveStreamingDetails"}).
-				Id(videoId).
-				Do()
+	// repeated polling from the livestream until an error occurred.
+	go func() {
 
-		if err != nil {
-			errorCh <- err
-		}
+		ytParser := YoutubeMessageParser{}
 
-		liveChatId := ""
+		liveChatMessagesService := yt.NewLiveChatMessagesService(ytService)
+		liveChatServiceCall := liveChatMessagesService.List(liveChatId, []string{"snippet", "authorDetails"})
 
-		for _, item := range videoRes.Items {
-			liveChatId = item.LiveStreamingDetails.ActiveLiveChatId
-		}
-		if liveChatId == "" {
-			errorCh <- fmt.Errorf("the live has ended")
-		}
-
-		// repeated polling from the livestream until an error occurred.
-		go func() {
-
-			ytParser := YoutubeMessageParser{}
-
-			liveChatMessagesService := yt.NewLiveChatMessagesService(ytService)
-			liveChatServiceCall := liveChatMessagesService.List(liveChatId, []string{"snippet", "authorDetails"})
-
-			err := liveChatServiceCall.Pages(context.Background(), func(response *yt.LiveChatMessageListResponse) error {
-				waitUntilTimeStamp := time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
-				for _, item := range response.Items {
-					if item != nil && item.Snippet != nil {
-						publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
-						if err != nil {
-							fmt.Println("sup")
-							publishedTime = time.Now()
-						}
-						messageUpdates <- service.MessageUpdate{
-							UpdateTime: publishedTime,
-							Update:     service.New,
-							Message:    ytParser.ParseMessage(item),
-						}
+		err := liveChatServiceCall.Pages(context.Background(), func(response *yt.LiveChatMessageListResponse) error {
+			waitUntilTimeStamp := time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
+			for _, item := range response.Items {
+				if item != nil && item.Snippet != nil {
+					publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
+					if err != nil {
+						fmt.Println("sup")
+						publishedTime = time.Now()
+					}
+					*ytEmitter.UpdateEmitter() <- service.MessageUpdate{
+						UpdateTime: publishedTime,
+						Update:     service.New,
+						Message:    ytParser.ParseMessage(item),
 					}
 				}
-				waitDuration := waitUntilTimeStamp.Sub(time.Now())
-				if waitDuration > 0 {
-					time.Sleep(waitDuration)
-				}
-
-				return nil
-			})
-
-			if err != nil {
-				fmt.Println("End livestream with an error:")
-				fmt.Printf("%s\n", err.Error())
 			}
-		}()
+			waitDuration := waitUntilTimeStamp.Sub(time.Now())
+			if waitDuration > 0 {
+				time.Sleep(waitDuration)
+			}
 
-		fmt.Printf("New Youtube Emitter created!\n")
+			return nil
+		})
+
+		if err != nil {
+			fmt.Println("End livestream with an error:")
+			fmt.Printf("%s\n", err.Error())
+		}
 	}()
 
-	return &YoutubeEmitter{
+	fmt.Printf("Youtube emitter setup complete!\n")
+}
+
+// NewEmitter create a new YouTube emitter. Note that this blocks until the oauth key is
+// retrieved from the workflow.
+func NewEmitter(config *YoutubeEmitterConfig) *YoutubeEmitter {
+
+	messageUpdates := make(chan service.MessageUpdate)
+	errorCh := make(chan error)
+
+	youtubeEmitter := YoutubeEmitter{
 		updateEmitter: &messageUpdates,
 		errorEmitter:  errorCh,
-	}, nil
+	}
+
+	go func() {
+		SetupAsync(config, &youtubeEmitter)
+	}()
+
+	return &youtubeEmitter
 }
