@@ -147,6 +147,11 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 
 	if messageChannel.youtubeEmitter != nil {
 		go func() {
+			// TODO: get from db server
+			ytChannelID1 := os.Getenv("TEST_YT_CHANNEL_ID_1")
+			ytChannelID2 := os.Getenv("TEST_YT_CHANNEL_ID_2")
+			messageChannel.youtubeEmitter.RegisterChannel(ytChannelID1)
+			messageChannel.youtubeEmitter.RegisterChannel(ytChannelID2)
 			for {
 				select {
 				case ytMsg := <-messageChannel.youtubeEmitter.UpdateEmitter():

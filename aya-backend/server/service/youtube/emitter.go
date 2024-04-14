@@ -10,7 +10,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	yt "google.golang.org/api/youtube/v3"
-	"os"
+	"sync"
 	"time"
 )
 
@@ -25,10 +25,203 @@ type YoutubeEmitterConfig struct {
 	RedirectBasedUrl string
 }
 
+type liveChatAPIRequest struct {
+	requestCall *yt.LiveChatMessagesListCall
+	responseCh  chan *yt.LiveChatMessageListResponse
+	errCh       chan error
+}
+
+type channelsTable struct {
+	mutexLock         sync.Mutex
+	registeredChannel map[string]chan bool
+	apiStopCallSig    chan bool
+	requestCall       chan liveChatAPIRequest
+	ytService         *yt.Service
+}
+
+func (chanTable *channelsTable) setUpLiveChatService() {
+	go func() {
+		nextApiCall := time.Now()
+		// TODO: rewrite this to avoid time.Sleep.
+		// Thinking of doing something so that I can still cancel during sleep time
+		for {
+			select {
+			case <-chanTable.apiStopCallSig:
+				close(chanTable.apiStopCallSig)
+				close(chanTable.requestCall)
+				return
+			case liveChatCall := <-chanTable.requestCall:
+
+				sleepDuration := nextApiCall.Sub(time.Now())
+				if sleepDuration > 0 {
+					time.Sleep(sleepDuration)
+				}
+
+				response, err := liveChatCall.requestCall.Do()
+				if err != nil {
+					liveChatCall.errCh <- err
+				} else {
+					nextApiCall = time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
+					liveChatCall.responseCh <- response
+				}
+			}
+		}
+
+	}()
+}
+
+func (chanTable *channelsTable) removeChannel(channelId string) {
+	chanTable.mutexLock.Lock()
+	defer chanTable.mutexLock.Unlock()
+	if chanTable.registeredChannel == nil {
+		// Don't have to do anything
+		fmt.Printf("channel %s have not been registered, doing nothing\n", channelId)
+		return
+	}
+	chanTable.registeredChannel[channelId] <- true
+	delete(chanTable.registeredChannel, channelId)
+}
+
+func (chanTable *channelsTable) registerChannel(channelId string, msgChan chan service.MessageUpdate) {
+	// attempt to get the channel info, i.e. is there any live vid at the moment
+
+	chanTable.mutexLock.Lock()
+	defer chanTable.mutexLock.Unlock()
+
+	if chanTable.registeredChannel[channelId] != nil {
+		// Do not have to do anything, since it is already been registered
+		fmt.Printf("channel %s have been registered, doing nothing\n", channelId)
+		return
+	}
+
+	stopSignals := make(chan bool)
+	chanTable.registeredChannel[channelId] = stopSignals
+	errCh := make(chan error)
+	stopDuringListening := make(chan bool)
+
+	ytParser := YoutubeMessageParser{}
+
+	setupChannel := func() {
+		searchRes, err := chanTable.ytService.Search.
+			List([]string{"id"}).
+			ChannelId(channelId).
+			EventType("live").
+			Type("video").
+			Do()
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if len(searchRes.Items) == 0 {
+			errCh <- fmt.Errorf("no live videos found for channel %s", channelId)
+			return
+		}
+
+		videoId := searchRes.Items[0].Id.VideoId
+
+		videoRes, err :=
+			chanTable.ytService.Videos.
+				List([]string{"liveStreamingDetails"}).
+				Id(videoId).
+				Do()
+
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		liveChatId := ""
+
+		for _, item := range videoRes.Items {
+			liveChatId = item.LiveStreamingDetails.ActiveLiveChatId
+		}
+
+		if liveChatId == "" {
+			errCh <- fmt.Errorf("the live has ended")
+			return
+		}
+
+		apiErrCh := make(chan error)
+		responseCh := make(chan *yt.LiveChatMessageListResponse)
+		var pageToken *string
+
+		for {
+			liveChatMessagesService := yt.NewLiveChatMessagesService(chanTable.ytService)
+			liveChatServiceCall := liveChatMessagesService.List(liveChatId, []string{"snippet", "authorDetails"})
+			if pageToken != nil {
+				liveChatServiceCall = liveChatServiceCall.PageToken(*pageToken)
+			}
+			liveChatApiRequest := liveChatAPIRequest{
+				requestCall: liveChatServiceCall,
+				responseCh:  responseCh,
+				errCh:       apiErrCh,
+			}
+			chanTable.requestCall <- liveChatApiRequest
+			select {
+			case <-stopSignals:
+				close(stopSignals)
+				stopDuringListening <- true
+				return
+			case err := <-apiErrCh:
+				close(apiErrCh)
+				fmt.Printf("Error during api calls: %v\n", err.Error())
+				errCh <- err
+				return
+			case response := <-responseCh:
+				pageToken = &response.NextPageToken
+				for _, item := range response.Items {
+					if item != nil && item.Snippet != nil {
+						publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
+						if err != nil {
+							fmt.Println("Error when parsing time in chat. Opt for current Time")
+							publishedTime = time.Now()
+						}
+						fmt.Println(publishedTime.Format(time.RFC822Z))
+						msgChan <- service.MessageUpdate{
+							UpdateTime: publishedTime,
+							Update:     service.New,
+							Message:    ytParser.ParseMessage(item),
+						}
+					}
+				}
+			}
+		}
+	}
+
+	go func() {
+		go setupChannel()
+		for {
+			select {
+			case err := <-errCh:
+				// sleep for a duration before a cool reset
+				sleepDuration := 1 * time.Minute
+				fmt.Printf("Error during processing channel %s: %s\nReseting in %s\n", channelId, err.Error(), sleepDuration)
+				time.Sleep(sleepDuration)
+				go setupChannel()
+			case _ = <-stopDuringListening:
+				close(stopDuringListening)
+				close(errCh)
+				return
+			}
+		}
+	}()
+
+}
+
 type YoutubeEmitter struct {
 	service.ChatEmitter
 	updateEmitter chan service.MessageUpdate
 	errorEmitter  chan error
+	chanTable     channelsTable
+}
+
+func (youtubeEmitter *YoutubeEmitter) RegisterChannel(channelId string) {
+	youtubeEmitter.chanTable.registerChannel(channelId, youtubeEmitter.updateEmitter)
+}
+
+func (youtubeEmitter *YoutubeEmitter) RemoveChannel(channelId string) {
+	youtubeEmitter.chanTable.removeChannel(channelId)
 }
 
 func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
@@ -36,6 +229,12 @@ func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate
 }
 
 func (youtubeEmitter *YoutubeEmitter) CloseEmitter() error {
+	youtubeEmitter.chanTable.mutexLock.Lock()
+	defer youtubeEmitter.chanTable.mutexLock.Unlock()
+	for _, stopCh := range youtubeEmitter.chanTable.registeredChannel {
+		stopCh <- true
+	}
+	youtubeEmitter.chanTable.apiStopCallSig <- true
 	close(youtubeEmitter.updateEmitter)
 	close(youtubeEmitter.errorEmitter)
 	return nil
@@ -100,97 +299,11 @@ func SetupAsync(config *YoutubeEmitterConfig, ytEmitter *YoutubeEmitter) {
 		return
 	}
 
-	// TODO: work with database to retrieve the Youtube URL
-	channelId := os.Getenv("TEST_YT_CHANNEL_ID")
-	if channelId == "" {
-		ytEmitter.ErrorEmitter() <- fmt.Errorf("env variable TEST_UT_CHANNEL_ID not found")
-		return
-	}
-
 	if ytService == nil {
 		ytEmitter.ErrorEmitter() <- fmt.Errorf("cannot setup youtube service from the config")
 		return
 	}
-
-	searchRes, err := ytService.Search.
-		List([]string{"id"}).
-		ChannelId(channelId).
-		EventType("live").
-		Type("video").
-		Do()
-	if err != nil {
-		ytEmitter.ErrorEmitter() <- err
-		return
-	}
-
-	if len(searchRes.Items) == 0 {
-		ytEmitter.ErrorEmitter() <- fmt.Errorf("no live videos found for channel %s", channelId)
-		return
-	}
-
-	videoId := searchRes.Items[0].Id.VideoId
-
-	videoService := yt.NewVideosService(ytService)
-
-	videoRes, err :=
-		videoService.
-			List([]string{"liveStreamingDetails"}).
-			Id(videoId).
-			Do()
-
-	if err != nil {
-		ytEmitter.ErrorEmitter() <- err
-		return
-	}
-
-	liveChatId := ""
-
-	for _, item := range videoRes.Items {
-		liveChatId = item.LiveStreamingDetails.ActiveLiveChatId
-	}
-	if liveChatId == "" {
-		ytEmitter.ErrorEmitter() <- fmt.Errorf("the live has ended")
-		return
-	}
-
-	// repeated polling from the livestream until an error occurred.
-	go func() {
-
-		ytParser := YoutubeMessageParser{}
-
-		liveChatMessagesService := yt.NewLiveChatMessagesService(ytService)
-		liveChatServiceCall := liveChatMessagesService.List(liveChatId, []string{"snippet", "authorDetails"})
-
-		err := liveChatServiceCall.Pages(context.Background(), func(response *yt.LiveChatMessageListResponse) error {
-			waitUntilTimeStamp := time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
-			for _, item := range response.Items {
-				if item != nil && item.Snippet != nil {
-					publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
-					if err != nil {
-						fmt.Println("Error when parsing time in chat. Opt for current Time")
-						publishedTime = time.Now()
-					}
-					fmt.Println(publishedTime.Format(time.RFC822Z))
-					ytEmitter.UpdateEmitter() <- service.MessageUpdate{
-						UpdateTime: publishedTime,
-						Update:     service.New,
-						Message:    ytParser.ParseMessage(item),
-					}
-				}
-			}
-			waitDuration := waitUntilTimeStamp.Sub(time.Now())
-			if waitDuration > 0 {
-				time.Sleep(waitDuration)
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			fmt.Println("End livestream with an error:")
-			fmt.Printf("%s\n", err.Error())
-		}
-	}()
+	ytEmitter.chanTable.ytService = ytService
 
 	fmt.Printf("Youtube emitter setup complete!\n")
 }
@@ -205,10 +318,18 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 	youtubeEmitter := YoutubeEmitter{
 		updateEmitter: messageUpdates,
 		errorEmitter:  errorCh,
+		chanTable: channelsTable{
+			registeredChannel: make(map[string]chan bool),
+			apiStopCallSig:    make(chan bool),
+			requestCall:       make(chan liveChatAPIRequest),
+		},
 	}
 
 	go func() {
+		youtubeEmitter.chanTable.mutexLock.Lock()
 		SetupAsync(config, &youtubeEmitter)
+		youtubeEmitter.chanTable.setUpLiveChatService()
+		youtubeEmitter.chanTable.mutexLock.Unlock()
 	}()
 
 	return &youtubeEmitter, nil
