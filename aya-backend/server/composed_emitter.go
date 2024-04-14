@@ -7,12 +7,18 @@ import (
 	youtubesource "aya-backend/server/service/youtube"
 	"errors"
 	"fmt"
+	"github.com/gorilla/mux"
 	"os"
 )
 
 const (
-	YOUTUBE_API_KEY_ENV = "YOUTUBE_API_KEY"
-	DISCORD_TOKEN_ENV   = "DISCORD_TOKEN"
+	YOUTUBE_API_KEY_ENV           = "YOUTUBE_API_KEY"
+	YOUTUBE_CLIENT_ID_ENV         = "YOUTUBE_CLIENT_ID"
+	YOUTUBE_CLIENT_SECRET_ENV     = "YOUTUBE_CLIENT_SECRET"
+	YOUTUBE_FLOW_ENV              = "YOUTUBE_FLOW"
+	YOUTUBE_BOT_ACCOUNT_EMAIL_ENV = "YOUTUBE_BOT_ACCOUNT_EMAIL"
+
+	DISCORD_TOKEN_ENV = "DISCORD_TOKEN"
 )
 
 type MessagesChannel struct {
@@ -28,6 +34,8 @@ type MessageChannelConfig struct {
 	Discord bool
 	Test    bool
 	Youtube bool
+	BaseURL string
+	Router  *mux.Router
 }
 
 func (messageChannel MessagesChannel) UpdateEmitter() *chan service.MessageUpdate {
@@ -63,7 +71,7 @@ func (messageChannel MessagesChannel) CloseEmitter() error {
 	}
 }
 
-func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
+func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChannel {
 
 	messageChannel := MessagesChannel{
 		testEmitter:    nil,
@@ -71,7 +79,7 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 		youtubeEmitter: nil,
 	}
 
-	if settings.Discord {
+	if messageChannelConfig.Discord {
 		discordToken := os.Getenv(DISCORD_TOKEN_ENV)
 		discordEmitter, err := discordsource.NewEmitter(discordToken)
 
@@ -82,17 +90,32 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 		messageChannel.discordEmitter = discordEmitter
 	}
 
-	if settings.Test {
+	if messageChannelConfig.Test {
 		testEmitter := test_source.NewEmitter()
 		messageChannel.testEmitter = testEmitter
 	}
 
-	if settings.Youtube {
+	if messageChannelConfig.Youtube {
 		ytApiKey := os.Getenv(YOUTUBE_API_KEY_ENV)
-		ytEmitterConfig := youtubesource.YoutubeEmitterConfig{
-			ApiKey: ytApiKey,
+		ytClientId := os.Getenv(YOUTUBE_CLIENT_ID_ENV)
+		ytClientSecret := os.Getenv(YOUTUBE_CLIENT_SECRET_ENV)
+		ytFlow := os.Getenv(YOUTUBE_FLOW_ENV)
+
+		ytEmitterConfig := &youtubesource.YoutubeEmitterConfig{}
+
+		switch ytFlow {
+		case "api":
+			ytEmitterConfig.UseApiKey = true
+			ytEmitterConfig.ApiKey = ytApiKey
+		case "oauth":
+			ytEmitterConfig.UseOAuth = true
+			ytEmitterConfig.ClientID = ytClientId
+			ytEmitterConfig.ClientSecret = ytClientSecret
+			ytEmitterConfig.Router = messageChannelConfig.Router.PathPrefix("/auth").Subrouter()
+			ytEmitterConfig.RedirectBasedUrl = fmt.Sprintf("%s/auth", messageChannelConfig.BaseURL)
 		}
-		youtubeEmitter, err := youtubesource.NewEmitter(&ytEmitterConfig)
+
+		youtubeEmitter, err := youtubesource.NewEmitter(ytEmitterConfig)
 		if err != nil {
 			fmt.Printf("Error during creating a youtube emitter: %s\n", err.Error())
 		}
@@ -124,9 +147,15 @@ func NewMessageChannel(settings *MessageChannelConfig) *MessagesChannel {
 	if messageChannel.youtubeEmitter != nil {
 		go func() {
 			for {
-				ytMsg := <-*messageChannel.youtubeEmitter.UpdateEmitter()
-				fmt.Println("Message from youtube!")
-				msgC <- ytMsg
+				select {
+				case ytMsg := <-*messageChannel.youtubeEmitter.UpdateEmitter():
+					fmt.Println("Message from youtube!")
+					msgC <- ytMsg
+				case err := <-messageChannel.youtubeEmitter.ErrorEmitter():
+					fmt.Printf("Error from youtube:%s\n", err.Error())
+					break
+				}
+
 			}
 		}()
 	}

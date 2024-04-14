@@ -25,6 +25,8 @@ const (
 	SQL_DB_PATH_ENV = "SQL_DB_PATH"
 	DEFAULT_DB_PATH = "data"
 	DB_NAME         = "aya.db"
+
+	REDIRECT_URL_ENV = "REDIRECT_URL"
 )
 
 func sendMessage(chanMap map[string]*chan MessageUpdate, msg MessageUpdate) {
@@ -61,7 +63,7 @@ func getDB() (*gorm.DB, error) {
 
 }
 
-func parseConfig(msgSettingStr string) *MessageChannelConfig {
+func parseEmitterConfig(msgSettingStr string) *MessageChannelConfig {
 
 	config := MessageChannelConfig{
 		Test:    false,
@@ -78,8 +80,8 @@ func parseConfig(msgSettingStr string) *MessageChannelConfig {
 		case "youtube":
 			config.Youtube = true
 		}
-
 	}
+
 	return &config
 }
 
@@ -95,9 +97,13 @@ func main() {
 	}
 
 	fmt.Println("Hello, world!")
+	r := mux.NewRouter()
 
 	enabledSourceStr := os.Getenv(SOURCES_ENV)
-	msgChanConfig := parseConfig(enabledSourceStr)
+	msgChanConfig := parseEmitterConfig(enabledSourceStr)
+
+	msgChanConfig.BaseURL = os.Getenv(REDIRECT_URL_ENV)
+	msgChanConfig.Router = r
 
 	msgChanEmitter := NewMessageChannel(msgChanConfig)
 
@@ -106,7 +112,6 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
-	r := mux.NewRouter()
 	streamRouter := r.PathPrefix("/stream").Subrouter()
 
 	wsServer, err := socket.NewWSServer(streamRouter)

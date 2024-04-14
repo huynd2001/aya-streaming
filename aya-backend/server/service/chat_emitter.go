@@ -5,4 +5,6 @@ type ChatEmitter interface {
 	UpdateEmitter() *chan MessageUpdate
 	// CloseEmitter everything and free up resources
 	CloseEmitter() error
+	// ErrorEmitter emits error if exists
+	ErrorEmitter() chan error
 }
