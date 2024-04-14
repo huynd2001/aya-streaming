@@ -27,7 +27,7 @@ type MessagesChannel struct {
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
 
-	updateEmitter *chan service.MessageUpdate
+	updateEmitter chan service.MessageUpdate
 }
 
 type MessageChannelConfig struct {
@@ -38,13 +38,13 @@ type MessageChannelConfig struct {
 	Router  *mux.Router
 }
 
-func (messageChannel MessagesChannel) UpdateEmitter() *chan service.MessageUpdate {
+func (messageChannel MessagesChannel) UpdateEmitter() chan service.MessageUpdate {
 	return messageChannel.updateEmitter
 }
 
 func (messageChannel MessagesChannel) CloseEmitter() error {
 
-	close(*messageChannel.updateEmitter)
+	close(messageChannel.updateEmitter)
 
 	var testError error = nil
 	var discordError error = nil
@@ -128,7 +128,7 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 	if messageChannel.testEmitter != nil {
 		go func() {
 			for {
-				testMsg := <-*messageChannel.testEmitter.UpdateEmitter()
+				testMsg := <-messageChannel.testEmitter.UpdateEmitter()
 				fmt.Println("Message from test source!")
 				msgC <- testMsg
 			}
@@ -138,7 +138,7 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 	if messageChannel.discordEmitter != nil {
 		go func() {
 			for {
-				discordMsg := <-*messageChannel.discordEmitter.UpdateEmitter()
+				discordMsg := <-messageChannel.discordEmitter.UpdateEmitter()
 				fmt.Println("Message from discord!")
 				msgC <- discordMsg
 			}
@@ -149,7 +149,7 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 		go func() {
 			for {
 				select {
-				case ytMsg := <-*messageChannel.youtubeEmitter.UpdateEmitter():
+				case ytMsg := <-messageChannel.youtubeEmitter.UpdateEmitter():
 					fmt.Println("Message from youtube!")
 					msgC <- ytMsg
 				case err := <-messageChannel.youtubeEmitter.ErrorEmitter():
@@ -160,7 +160,7 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 			}
 		}()
 	}
-	messageChannel.updateEmitter = &msgC
+	messageChannel.updateEmitter = msgC
 
 	return &messageChannel
 }

@@ -29,10 +29,10 @@ const (
 	REDIRECT_URL_ENV = "REDIRECT_URL"
 )
 
-func sendMessage(chanMap map[string]*chan MessageUpdate, msg MessageUpdate) {
+func sendMessage(chanMap map[string]chan MessageUpdate, msg MessageUpdate) {
 	for key, value := range chanMap {
 		fmt.Printf("Sent message to channel %s\n", key)
-		*value <- msg
+		value <- msg
 	}
 }
 
@@ -133,7 +133,7 @@ func main() {
 	go func() {
 		for {
 			select {
-			case msg := <-*msgC:
+			case msg := <-msgC:
 				fmt.Printf("%#v\n", msg)
 				sendMessage(wsServer.ChanMap, msg)
 			case _ = <-sc:

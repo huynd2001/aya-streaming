@@ -27,16 +27,16 @@ type YoutubeEmitterConfig struct {
 
 type YoutubeEmitter struct {
 	service.ChatEmitter
-	updateEmitter *chan service.MessageUpdate
+	updateEmitter chan service.MessageUpdate
 	errorEmitter  chan error
 }
 
-func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() *chan service.MessageUpdate {
+func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
 	return youtubeEmitter.updateEmitter
 }
 
 func (youtubeEmitter *YoutubeEmitter) CloseEmitter() error {
-	close(*youtubeEmitter.updateEmitter)
+	close(youtubeEmitter.updateEmitter)
 	close(youtubeEmitter.errorEmitter)
 	return nil
 }
@@ -171,7 +171,7 @@ func SetupAsync(config *YoutubeEmitterConfig, ytEmitter *YoutubeEmitter) {
 						publishedTime = time.Now()
 					}
 					fmt.Println(publishedTime.Format(time.RFC822Z))
-					*ytEmitter.UpdateEmitter() <- service.MessageUpdate{
+					ytEmitter.UpdateEmitter() <- service.MessageUpdate{
 						UpdateTime: publishedTime,
 						Update:     service.New,
 						Message:    ytParser.ParseMessage(item),
@@ -203,7 +203,7 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 	errorCh := make(chan error)
 
 	youtubeEmitter := YoutubeEmitter{
-		updateEmitter: &messageUpdates,
+		updateEmitter: messageUpdates,
 		errorEmitter:  errorCh,
 	}
 

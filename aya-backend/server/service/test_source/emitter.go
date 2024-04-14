@@ -8,21 +8,27 @@ import (
 
 type TestEmitter struct {
 	ChatEmitter
-	updateEmitter *chan MessageUpdate
+	updateEmitter chan MessageUpdate
+	errorEmitter  chan error
 }
 
-func (testEmitter *TestEmitter) UpdateEmitter() *chan MessageUpdate {
+func (testEmitter *TestEmitter) UpdateEmitter() chan MessageUpdate {
 	return testEmitter.updateEmitter
 }
 
 func (testEmitter *TestEmitter) CloseEmitter() error {
-	close(*testEmitter.updateEmitter)
+	close(testEmitter.updateEmitter)
 	return nil
+}
+
+func (testEmitter *TestEmitter) ErrorEmitter() chan error {
+	return testEmitter.errorEmitter
 }
 
 func NewEmitter() *TestEmitter {
 
 	messageUpdates := make(chan MessageUpdate)
+	errorEmitter := make(chan error)
 
 	go func() {
 		i := 0
@@ -77,7 +83,8 @@ func NewEmitter() *TestEmitter {
 	fmt.Println("New Test Emitter created!")
 
 	return &TestEmitter{
-		updateEmitter: &messageUpdates,
+		updateEmitter: messageUpdates,
+		errorEmitter:  errorEmitter,
 	}
 
 }

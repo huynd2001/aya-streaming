@@ -24,7 +24,7 @@ var (
 
 type WSServer struct {
 	upg     *ws.Upgrader
-	ChanMap map[string]*chan MessageUpdate
+	ChanMap map[string]chan MessageUpdate
 }
 
 func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
@@ -41,9 +41,9 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 	if wsServer.ChanMap[id] != nil {
 		msgChan := wsServer.ChanMap[id]
 		delete(wsServer.ChanMap, id)
-		close(*msgChan)
+		close(msgChan)
 	}
-	wsServer.ChanMap[id] = &msgChannel
+	wsServer.ChanMap[id] = msgChannel
 
 	defer func(c *ws.Conn) {
 		_ = c.Close()
@@ -131,7 +131,7 @@ func NewWSServer(s *mux.Router) (*WSServer, error) {
 
 	wsServer := WSServer{
 		upg:     &upg,
-		ChanMap: make(map[string]*chan MessageUpdate),
+		ChanMap: make(map[string]chan MessageUpdate),
 	}
 
 	s.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
