@@ -18,16 +18,16 @@
         @if (getAsFormGroup(resource).get('resourceType')?.value === 'discord') {
           <mat-form-field>
             <mat-label>Guild ID</mat-label>
-            <input matInput formControlName="discordGuildId" required>
+            <input matInput formControlName="discordGuildId">
           </mat-form-field>
           <mat-form-field>
             <mat-label>Channel ID</mat-label>
-            <input matInput formControlName="discordChannelId" required>
+            <input matInput formControlName="discordChannelId">
           </mat-form-field>
         } @else if (getAsFormGroup(resource).get('resourceType')?.value === 'youtube') {
           <mat-form-field>
             <mat-label>Channel ID</mat-label>
-            <input matInput formControlName="youtubeChannelId" required>
+            <input matInput formControlName="youtubeChannelId">
           </mat-form-field>
         }
         <button mat-icon-button (click)="deleteForm($index)"><mat-icon>delete</mat-icon></button>

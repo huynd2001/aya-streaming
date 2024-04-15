@@ -28,40 +28,48 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { Validators } from '@angular/forms';
 import { SessionDialogInfo } from '../../interfaces/session';
 
-const sessionValidator: ValidatorFn = (
-  control: AbstractControl
-): ValidationErrors | null => {
-  const resourceType = control.get('resourceType')?.value;
-  switch (resourceType) {
-    case 'discord':
-      const discordChannelId = control.get('discordChannelId')?.value;
-      const discordGuildId = control.get('discordGuildId')?.value;
-      if (!discordChannelId) {
+function sessionValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const resourceType = control.get('resourceType')?.value;
+    switch (resourceType) {
+      case 'discord':
+        const discordChannelId = control.get('discordChannelId')?.value;
+        const discordGuildId = control.get('discordGuildId')?.value;
+        let validationError = {};
+        if (!discordChannelId) {
+          validationError = {
+            missingDiscordChannelId: true,
+            ...validationError,
+          };
+        }
+        if (!discordGuildId) {
+          validationError = {
+            missingDiscordGuildId: true,
+            ...validationError,
+          };
+        }
+        if (Object.keys(validationError).length === 0) {
+          return null;
+        } else {
+          return validationError;
+        }
+
+      case 'youtube':
+        const youtubeChannelId = control.get('youtubeChannelId')?.value;
+        if (!youtubeChannelId) {
+          return {
+            missingYoutubeChannelId: true,
+          };
+        } else {
+          return null;
+        }
+      default:
         return {
-          missingDiscordChannelId: true,
+          unknownResourceType: true,
         };
-      } else if (!discordGuildId) {
-        return {
-          missingDiscordGuildId: true,
-        };
-      } else {
-        return null;
-      }
-    case 'youtube':
-      const youtubeChannelId = control.get('youtubeChannelId')?.value;
-      if (!youtubeChannelId) {
-        return {
-          missingYoutubeChannelId: true,
-        };
-      } else {
-        return null;
-      }
-    default:
-      return {
-        unknownResourceType: true,
-      };
-  }
-};
+    }
+  };
+}
 
 @Component({
   selector: 'app-session-dialog',
@@ -115,7 +123,7 @@ export class SessionDialogComponent implements OnInit {
           youtubeChannelId: new FormControl(''),
         },
         {
-          validators: [sessionValidator],
+          validators: [sessionValidator()],
         }
       )
     );
@@ -144,4 +152,6 @@ export class SessionDialogComponent implements OnInit {
   protected readonly Validators = Validators;
 
   ngOnInit(): void {}
+
+  protected readonly JSON = JSON;
 }
