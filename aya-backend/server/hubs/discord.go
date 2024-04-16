@@ -23,7 +23,7 @@ func NewDiscordResourceHub() *DiscordResourceHub {
 func (hub *DiscordResourceHub) GetSessionId(resourceInfo any) []string {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
-	discordInfo, ok := resourceInfo.(discordsource.DiscordSpecificInfo)
+	discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
 	if !ok {
 		return []string{}
 	}
@@ -58,7 +58,7 @@ func (hub *DiscordResourceHub) RemoveSession(sessionId string) {
 func (hub *DiscordResourceHub) AddSession(sessionId string, resourceInfo any) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
-	discordInfo, ok := resourceInfo.(discordsource.DiscordSpecificInfo)
+	discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
 	if !ok {
 		// do nothing
 		return

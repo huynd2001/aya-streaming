@@ -22,7 +22,7 @@ func NewYoutubeResourceHub() *YoutubeResourceHub {
 func (hub *YoutubeResourceHub) GetSessionId(resourceInfo any) []string {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
-	ytResourceInfo, ok := resourceInfo.(youtubesource.YoutubeSpecificInfo)
+	ytResourceInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
 	if !ok {
 		return []string{}
 	}
@@ -56,7 +56,7 @@ func (hub *YoutubeResourceHub) RemoveSession(sessionId string) {
 func (hub *YoutubeResourceHub) AddSession(sessionId string, resourceInfo any) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
-	ytResourceInfo, ok := resourceInfo.(youtubesource.YoutubeSpecificInfo)
+	ytResourceInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
 	if !ok {
 		// do nothing
 		return

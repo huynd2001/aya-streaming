@@ -140,7 +140,7 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 							UpdateTime: publishedTime,
 							Update:     service.New,
 							Message:    ytParser.ParseMessage(item),
-							ExtraFields: YoutubeSpecificInfo{
+							ExtraFields: YoutubeInfo{
 								YoutubeChannelId: channelId,
 							},
 						}
