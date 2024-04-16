@@ -18,6 +18,26 @@ type DiscordEmitter struct {
 	register      *discordRegister
 }
 
+func (emitter *DiscordEmitter) Register(resourceInfo any) {
+	discordInfo, ok := resourceInfo.(DiscordInfo)
+	if !ok {
+		return
+	}
+	guildId := discordInfo.DiscordGuildId
+	channelId := discordInfo.DiscordChannelId
+	emitter.register.register(guildId, channelId)
+}
+
+func (emitter *DiscordEmitter) Deregister(resourceInfo any) {
+	discordInfo, ok := resourceInfo.(DiscordInfo)
+	if !ok {
+		return
+	}
+	guildId := discordInfo.DiscordGuildId
+	channelId := discordInfo.DiscordChannelId
+	emitter.register.deregister(guildId, channelId)
+}
+
 func (emitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate {
 	return emitter.updateEmitter
 }
@@ -112,12 +132,4 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 
 	fmt.Printf("New Discord Emitter created!\n")
 	return &discordEmitter, nil
-}
-
-func (emitter *DiscordEmitter) RegisterGuildChannel(guildId string, channelId string) {
-	emitter.register.registerChannel(guildId, channelId)
-}
-
-func (emitter *DiscordEmitter) DeregisterGuildChannel(guildId string, channelId string) {
-	emitter.register.deregisterChannel(guildId, channelId)
 }

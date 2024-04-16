@@ -141,8 +141,14 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 			guildID2 := os.Getenv("TEST_GUILD_ID_2")
 			channelID1 := os.Getenv("TEST_CHANNEL_ID_1")
 			channelID2 := os.Getenv("TEST_CHANNEL_ID_2")
-			messageChannel.discordEmitter.RegisterGuildChannel(guildID1, channelID1)
-			messageChannel.discordEmitter.RegisterGuildChannel(guildID2, channelID2)
+			messageChannel.discordEmitter.Register(discordsource.DiscordInfo{
+				DiscordGuildId:   guildID1,
+				DiscordChannelId: channelID1,
+			})
+			messageChannel.discordEmitter.Register(discordsource.DiscordInfo{
+				DiscordGuildId:   guildID2,
+				DiscordChannelId: channelID2,
+			})
 			for {
 				discordMsg := <-messageChannel.discordEmitter.UpdateEmitter()
 				fmt.Println("Message from discord!")
@@ -156,8 +162,12 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 			// TODO: get from db server
 			ytChannelID1 := os.Getenv("TEST_YT_CHANNEL_ID_1")
 			ytChannelID2 := os.Getenv("TEST_YT_CHANNEL_ID_2")
-			messageChannel.youtubeEmitter.RegisterChannel(ytChannelID1)
-			messageChannel.youtubeEmitter.RegisterChannel(ytChannelID2)
+			messageChannel.youtubeEmitter.Register(youtubesource.YoutubeInfo{
+				YoutubeChannelId: ytChannelID1,
+			})
+			messageChannel.youtubeEmitter.Register(youtubesource.YoutubeInfo{
+				YoutubeChannelId: ytChannelID2,
+			})
 			for {
 				select {
 				case ytMsg := <-messageChannel.youtubeEmitter.UpdateEmitter():

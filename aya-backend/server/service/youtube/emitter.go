@@ -29,32 +29,45 @@ type YoutubeEmitterConfig struct {
 
 type YoutubeEmitter struct {
 	service.ChatEmitter
+	service.ResourceRegister
 	updateEmitter chan service.MessageUpdate
 	errorEmitter  chan error
 	register      *youtubeRegister
 }
 
-func (youtubeEmitter *YoutubeEmitter) RegisterChannel(channelId string) {
-	youtubeEmitter.register.registerChannel(channelId, youtubeEmitter.updateEmitter)
+func (emitter *YoutubeEmitter) Register(resourceInfo any) {
+	ytInfo, ok := resourceInfo.(*YoutubeInfo)
+	if !ok {
+		return
+	}
+	channelId := ytInfo.YoutubeChannelId
+	emitter.register.registerChannel(channelId, emitter.updateEmitter)
 }
 
-func (youtubeEmitter *YoutubeEmitter) DeregisterChannel(channelId string) {
-	youtubeEmitter.register.deregisterChannel(channelId)
+func (emitter *YoutubeEmitter) Deregister(resourceInfo any) {
+
+	ytInfo, ok := resourceInfo.(*YoutubeInfo)
+	if !ok {
+		return
+	}
+	channelId := ytInfo.YoutubeChannelId
+	emitter.register.deregisterChannel(channelId)
+
 }
 
-func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
-	return youtubeEmitter.updateEmitter
+func (emitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
+	return emitter.updateEmitter
 }
 
-func (youtubeEmitter *YoutubeEmitter) CloseEmitter() error {
-	youtubeEmitter.register.Stop()
-	close(youtubeEmitter.updateEmitter)
-	close(youtubeEmitter.errorEmitter)
+func (emitter *YoutubeEmitter) CloseEmitter() error {
+	emitter.register.Stop()
+	close(emitter.updateEmitter)
+	close(emitter.errorEmitter)
 	return nil
 }
 
-func (youtubeEmitter *YoutubeEmitter) ErrorEmitter() chan error {
-	return youtubeEmitter.errorEmitter
+func (emitter *YoutubeEmitter) ErrorEmitter() chan error {
+	return emitter.errorEmitter
 }
 
 func SetupAsync(config *YoutubeEmitterConfig, ytEmitter *YoutubeEmitter) *yt.Service {

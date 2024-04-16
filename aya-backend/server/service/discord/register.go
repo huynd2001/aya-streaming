@@ -16,7 +16,7 @@ func newDiscordRegister() *discordRegister {
 	}
 }
 
-func (register *discordRegister) registerChannel(guildId string, channelId string) {
+func (register *discordRegister) register(guildId string, channelId string) {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
 	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)
@@ -28,7 +28,7 @@ func (register *discordRegister) registerChannel(guildId string, channelId strin
 	return
 }
 
-func (register *discordRegister) deregisterChannel(guildId string, channelId string) {
+func (register *discordRegister) deregister(guildId string, channelId string) {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
 	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)
