@@ -12,11 +12,10 @@ import (
 )
 
 const (
-	YOUTUBE_API_KEY_ENV           = "YOUTUBE_API_KEY"
-	YOUTUBE_CLIENT_ID_ENV         = "YOUTUBE_CLIENT_ID"
-	YOUTUBE_CLIENT_SECRET_ENV     = "YOUTUBE_CLIENT_SECRET"
-	YOUTUBE_FLOW_ENV              = "YOUTUBE_FLOW"
-	YOUTUBE_BOT_ACCOUNT_EMAIL_ENV = "YOUTUBE_BOT_ACCOUNT_EMAIL"
+	YOUTUBE_API_KEY_ENV       = "YOUTUBE_API_KEY"
+	YOUTUBE_CLIENT_ID_ENV     = "YOUTUBE_CLIENT_ID"
+	YOUTUBE_CLIENT_SECRET_ENV = "YOUTUBE_CLIENT_SECRET"
+	YOUTUBE_FLOW_ENV          = "YOUTUBE_FLOW"
 
 	DISCORD_TOKEN_ENV = "DISCORD_TOKEN"
 )
@@ -79,6 +78,11 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 		youtubeEmitter: nil,
 	}
 
+	if messageChannelConfig.Test {
+		testEmitter := test_source.NewEmitter()
+		messageChannel.testEmitter = testEmitter
+	}
+
 	if messageChannelConfig.Discord {
 		discordToken := os.Getenv(DISCORD_TOKEN_ENV)
 		discordEmitter, err := discordsource.NewEmitter(discordToken)
@@ -88,11 +92,6 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 		}
 
 		messageChannel.discordEmitter = discordEmitter
-	}
-
-	if messageChannelConfig.Test {
-		testEmitter := test_source.NewEmitter()
-		messageChannel.testEmitter = testEmitter
 	}
 
 	if messageChannelConfig.Youtube {
