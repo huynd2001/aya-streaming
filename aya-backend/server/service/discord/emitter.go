@@ -7,6 +7,11 @@ import (
 	"os"
 )
 
+type DiscordSpecificInfo struct {
+	DiscordGuildId   string
+	DiscordChannelId string
+}
+
 type DiscordEmitter struct {
 	service.ChatEmitter
 	updateEmitter chan service.MessageUpdate
@@ -59,6 +64,10 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 					MessageParts: discordMsgParser.ParseMessage(m.Message),
 					Attachments:  discordMsgParser.ParseAttachment(m.Message),
 				},
+				ExtraFields: DiscordSpecificInfo{
+					DiscordGuildId:   m.GuildID,
+					DiscordChannelId: m.ChannelID,
+				},
 			}
 		}
 	})
@@ -72,6 +81,10 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 				Message: service.Message{
 					Source: service.Discord,
 					Id:     m.ID,
+				},
+				ExtraFields: DiscordSpecificInfo{
+					DiscordGuildId:   m.GuildID,
+					DiscordChannelId: m.ChannelID,
 				},
 			}
 		}
@@ -89,6 +102,10 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 					Author:       discordMsgParser.ParseAuthor(m.Author, m.ChannelID),
 					MessageParts: discordMsgParser.ParseMessage(m.Message),
 					Attachments:  discordMsgParser.ParseAttachment(m.Message),
+				},
+				ExtraFields: DiscordSpecificInfo{
+					DiscordGuildId:   m.GuildID,
+					DiscordChannelId: m.ChannelID,
 				},
 			}
 		}

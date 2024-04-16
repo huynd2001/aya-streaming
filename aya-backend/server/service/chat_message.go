@@ -142,7 +142,8 @@ type Author struct {
 }
 
 type MessageUpdate struct {
-	UpdateTime time.Time `json:"updateTime"`
-	Update     Update    `json:"update"`
-	Message    Message   `json:"message"`
+	UpdateTime  time.Time `json:"updateTime"`
+	Update      Update    `json:"update"`
+	Message     Message   `json:"message"`
+	ExtraFields any       `json:"-"`
 }

@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+type YoutubeSpecificInfo struct {
+	YoutubeChannelId string
+}
+
 type YoutubeEmitterConfig struct {
 	UseApiKey    bool
 	UseOAuth     bool
@@ -193,6 +197,9 @@ func (chanTable *channelsTable) registerChannel(channelId string, msgChan chan s
 							UpdateTime: publishedTime,
 							Update:     service.New,
 							Message:    ytParser.ParseMessage(item),
+							ExtraFields: YoutubeSpecificInfo{
+								YoutubeChannelId: channelId,
+							},
 						}
 					}
 				}
