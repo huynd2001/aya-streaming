@@ -29,60 +29,11 @@ type YoutubeEmitterConfig struct {
 	RedirectBasedUrl string
 }
 
-type liveChatAPIRequest struct {
-	requestCall *yt.LiveChatMessagesListCall
-	responseCh  chan *yt.LiveChatMessageListResponse
-	errCh       chan error
-}
-
 type channelsTable struct {
 	mutexLock         sync.Mutex
 	registeredChannel map[string]chan bool
-	apiStopCallSig    chan bool
-	requestCall       chan liveChatAPIRequest
+	liveChatApiCaller *liveChatApiCaller
 	ytService         *yt.Service
-}
-
-func (chanTable *channelsTable) setUpLiveChatService() {
-	go func() {
-		nextApiCall := time.Now()
-		intervalWait := make(chan bool)
-
-		for {
-			go func() {
-				sleepDuration := nextApiCall.Sub(time.Now())
-				if sleepDuration > 0 {
-					time.Sleep(sleepDuration)
-				}
-				intervalWait <- true
-			}()
-
-			select {
-			case <-chanTable.apiStopCallSig:
-				close(chanTable.apiStopCallSig)
-				close(chanTable.requestCall)
-				return
-			case <-intervalWait:
-				select {
-				case <-chanTable.apiStopCallSig:
-					close(chanTable.apiStopCallSig)
-					close(chanTable.requestCall)
-					return
-				case liveChatCall := <-chanTable.requestCall:
-
-					response, err := liveChatCall.requestCall.Do()
-					if err != nil {
-						liveChatCall.errCh <- err
-					} else {
-						nextApiCall = time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
-						liveChatCall.responseCh <- response
-					}
-				}
-			}
-
-		}
-
-	}()
 }
 
 func (chanTable *channelsTable) removeChannel(channelId string) {
@@ -172,7 +123,7 @@ func (chanTable *channelsTable) registerChannel(channelId string, msgChan chan s
 				responseCh:  responseCh,
 				errCh:       apiErrCh,
 			}
-			chanTable.requestCall <- liveChatApiRequest
+			chanTable.liveChatApiCaller.Request(liveChatApiRequest)
 			select {
 			case <-stopSignals:
 				close(stopSignals)
@@ -252,7 +203,7 @@ func (youtubeEmitter *YoutubeEmitter) CloseEmitter() error {
 	for _, stopCh := range youtubeEmitter.chanTable.registeredChannel {
 		stopCh <- true
 	}
-	youtubeEmitter.chanTable.apiStopCallSig <- true
+	youtubeEmitter.chanTable.liveChatApiCaller.Stop()
 	close(youtubeEmitter.updateEmitter)
 	close(youtubeEmitter.errorEmitter)
 	return nil
@@ -338,15 +289,15 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 		errorEmitter:  errorCh,
 		chanTable: channelsTable{
 			registeredChannel: make(map[string]chan bool),
-			apiStopCallSig:    make(chan bool),
-			requestCall:       make(chan liveChatAPIRequest),
+			liveChatApiCaller: nil,
 		},
 	}
 
 	go func() {
 		youtubeEmitter.chanTable.mutexLock.Lock()
 		SetupAsync(config, &youtubeEmitter)
-		youtubeEmitter.chanTable.setUpLiveChatService()
+		youtubeEmitter.chanTable.liveChatApiCaller = newApiCaller(youtubeEmitter.chanTable.ytService)
+		youtubeEmitter.chanTable.liveChatApiCaller.Start()
 		youtubeEmitter.chanTable.mutexLock.Unlock()
 	}()
 
