@@ -25,7 +25,9 @@ func newApiCaller(ytService *yt.Service) *liveChatApiCaller {
 	}
 }
 
-func (apiCaller *liveChatApiCaller) Start() {
+func (apiCaller *liveChatApiCaller) Start(ytService *yt.Service) {
+	apiCaller.ytService = ytService
+
 	go func() {
 		nextApiCall := time.Now()
 		intervalWait := make(chan bool)
