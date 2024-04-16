@@ -13,6 +13,13 @@ type DiscordResourceHub struct {
 	session2GuildChannel map[string]map[string]bool
 }
 
+func NewDiscordResourceHub() *DiscordResourceHub {
+	return &DiscordResourceHub{
+		guildChannel2Session: make(map[string]map[string]bool),
+		session2GuildChannel: make(map[string]map[string]bool),
+	}
+}
+
 func (hub *DiscordResourceHub) GetSessionId(resourceInfo any) []string {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()

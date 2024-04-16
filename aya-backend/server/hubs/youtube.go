@@ -12,8 +12,8 @@ type YoutubeResourceHub struct {
 	session2Channel map[string]map[string]bool
 }
 
-func NewYoutubeResourceHub() YoutubeResourceHub {
-	return YoutubeResourceHub{
+func NewYoutubeResourceHub() *YoutubeResourceHub {
+	return &YoutubeResourceHub{
 		channel2Session: make(map[string]map[string]bool),
 		session2Channel: make(map[string]map[string]bool),
 	}
