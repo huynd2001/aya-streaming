@@ -137,6 +137,13 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 
 	if messageChannel.discordEmitter != nil {
 		go func() {
+			// TODO: get from db server
+			guildID1 := os.Getenv("TEST_GUILD_ID_1")
+			guildID2 := os.Getenv("TEST_GUILD_ID_2")
+			channelID1 := os.Getenv("TEST_CHANNEL_ID_1")
+			channelID2 := os.Getenv("TEST_CHANNEL_ID_2")
+			messageChannel.discordEmitter.RegisterGuildChannel(guildID1, channelID1)
+			messageChannel.discordEmitter.RegisterGuildChannel(guildID2, channelID2)
 			for {
 				discordMsg := <-messageChannel.discordEmitter.UpdateEmitter()
 				fmt.Println("Message from discord!")

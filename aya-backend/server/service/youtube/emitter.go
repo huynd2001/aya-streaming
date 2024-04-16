@@ -38,8 +38,8 @@ func (youtubeEmitter *YoutubeEmitter) RegisterChannel(channelId string) {
 	youtubeEmitter.register.registerChannel(channelId, youtubeEmitter.updateEmitter)
 }
 
-func (youtubeEmitter *YoutubeEmitter) RemoveChannel(channelId string) {
-	youtubeEmitter.register.removeChannel(channelId)
+func (youtubeEmitter *YoutubeEmitter) DeregisterChannel(channelId string) {
+	youtubeEmitter.register.deregisterChannel(channelId)
 }
 
 func (youtubeEmitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {

@@ -28,7 +28,7 @@ func newYoutubeRegister(ytService *yt.Service) *youtubeRegister {
 	return &youtubeReg
 }
 
-func (register *youtubeRegister) removeChannel(channelId string) {
+func (register *youtubeRegister) deregisterChannel(channelId string) {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
 	if register.channelKillSignal[channelId] == nil {

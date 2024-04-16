@@ -35,7 +35,7 @@ func (register *discordRegister) deregisterChannel(guildId string, channelId str
 	delete(register.guildChannelMap, guildChannel)
 }
 
-func (register *discordRegister) Check(guildId string, channelId string) bool {
+func (register *discordRegister) check(guildId string, channelId string) bool {
 	register.mutex.RLock()
 	defer register.mutex.RUnlock()
 	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)

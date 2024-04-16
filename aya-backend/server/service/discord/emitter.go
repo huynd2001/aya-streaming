@@ -18,13 +18,13 @@ type DiscordEmitter struct {
 	register      *discordRegister
 }
 
-func (discordEmitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate {
-	return discordEmitter.updateEmitter
+func (emitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate {
+	return emitter.updateEmitter
 }
 
-func (discordEmitter *DiscordEmitter) CloseEmitter() error {
-	close(discordEmitter.updateEmitter)
-	return discordEmitter.discordClient.Close()
+func (emitter *DiscordEmitter) CloseEmitter() error {
+	close(emitter.updateEmitter)
+	return emitter.discordClient.Close()
 }
 
 func NewEmitter(token string) (*DiscordEmitter, error) {
@@ -46,7 +46,7 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	client.Identify.Intents = dg.IntentsAll
 
 	client.AddHandler(func(s *dg.Session, m *dg.MessageCreate) {
-		if discordEmitter.register.Check(m.GuildID, m.ChannelID) {
+		if discordEmitter.register.check(m.GuildID, m.ChannelID) {
 
 			messageUpdates <- service.MessageUpdate{
 				UpdateTime: m.Timestamp,
@@ -67,7 +67,7 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	})
 
 	client.AddHandler(func(s *dg.Session, m *dg.MessageDelete) {
-		if discordEmitter.register.Check(m.GuildID, m.ChannelID) {
+		if discordEmitter.register.check(m.GuildID, m.ChannelID) {
 
 			messageUpdates <- service.MessageUpdate{
 				UpdateTime: m.Timestamp,
@@ -85,7 +85,7 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	})
 
 	client.AddHandler(func(s *dg.Session, m *dg.MessageUpdate) {
-		if discordEmitter.register.Check(m.GuildID, m.ChannelID) {
+		if discordEmitter.register.check(m.GuildID, m.ChannelID) {
 
 			messageUpdates <- service.MessageUpdate{
 				UpdateTime: m.Timestamp,
@@ -112,4 +112,12 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 
 	fmt.Printf("New Discord Emitter created!\n")
 	return &discordEmitter, nil
+}
+
+func (emitter *DiscordEmitter) RegisterGuildChannel(guildId string, channelId string) {
+	emitter.register.registerChannel(guildId, channelId)
+}
+
+func (emitter *DiscordEmitter) DeregisterGuildChannel(guildId string, channelId string) {
+	emitter.register.deregisterChannel(guildId, channelId)
 }
