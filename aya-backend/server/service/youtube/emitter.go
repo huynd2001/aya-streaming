@@ -42,29 +42,40 @@ type channelsTable struct {
 func (chanTable *channelsTable) setUpLiveChatService() {
 	go func() {
 		nextApiCall := time.Now()
-		// TODO: rewrite this to avoid time.Sleep.
-		// Thinking of doing something so that I can still cancel during sleep time
+		intervalWait := make(chan bool)
+
 		for {
+			go func() {
+				sleepDuration := nextApiCall.Sub(time.Now())
+				if sleepDuration > 0 {
+					time.Sleep(sleepDuration)
+				}
+				intervalWait <- true
+			}()
+
 			select {
 			case <-chanTable.apiStopCallSig:
 				close(chanTable.apiStopCallSig)
 				close(chanTable.requestCall)
 				return
-			case liveChatCall := <-chanTable.requestCall:
+			case <-intervalWait:
+				select {
+				case <-chanTable.apiStopCallSig:
+					close(chanTable.apiStopCallSig)
+					close(chanTable.requestCall)
+					return
+				case liveChatCall := <-chanTable.requestCall:
 
-				sleepDuration := nextApiCall.Sub(time.Now())
-				if sleepDuration > 0 {
-					time.Sleep(sleepDuration)
-				}
-
-				response, err := liveChatCall.requestCall.Do()
-				if err != nil {
-					liveChatCall.errCh <- err
-				} else {
-					nextApiCall = time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
-					liveChatCall.responseCh <- response
+					response, err := liveChatCall.requestCall.Do()
+					if err != nil {
+						liveChatCall.errCh <- err
+					} else {
+						nextApiCall = time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
+						liveChatCall.responseCh <- response
+					}
 				}
 			}
+
 		}
 
 	}()

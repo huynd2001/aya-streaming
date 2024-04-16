@@ -52,6 +52,7 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 	defaultCloseHandler := c.CloseHandler()
 
 	c.SetCloseHandler(func(code int, text string) error {
+		fmt.Println("close websocket")
 		err := defaultCloseHandler(code, text)
 		if wsServer.ChanMap[id] != nil {
 			delete(wsServer.ChanMap, id)
