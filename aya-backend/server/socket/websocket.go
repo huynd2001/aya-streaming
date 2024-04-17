@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -22,14 +23,25 @@ var (
 	acceptableOrigin []string
 )
 
+type WSConnectionMap struct {
+	MessageConnChan map[int]chan MessageUpdate
+	CountId         int
+}
+
 type WSServer struct {
+	mutex   sync.RWMutex
 	upg     *ws.Upgrader
-	ChanMap map[string]chan MessageUpdate
+	ChanMap map[string]*WSConnectionMap
 }
 
 func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("id is empty"))
+		return
+	}
 
 	c, err := wsServer.upg.Upgrade(w, r, nil)
 	if err != nil {
@@ -37,13 +49,20 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wsServer.mutex.Lock()
 	msgChannel := make(chan MessageUpdate)
-	if wsServer.ChanMap[id] != nil {
-		msgChan := wsServer.ChanMap[id]
-		delete(wsServer.ChanMap, id)
-		close(msgChan)
+	if wsServer.ChanMap[id] == nil {
+		wsServer.ChanMap[id] = &WSConnectionMap{
+			MessageConnChan: make(map[int]chan MessageUpdate),
+			CountId:         0,
+		}
 	}
-	wsServer.ChanMap[id] = msgChannel
+	wsServer.ChanMap[id].CountId += 1
+
+	wsConnectionId := wsServer.ChanMap[id].CountId
+
+	wsServer.ChanMap[id].MessageConnChan[wsConnectionId] = msgChannel
+	wsServer.mutex.Unlock()
 
 	defer func(c *ws.Conn) {
 		_ = c.Close()
@@ -132,7 +151,7 @@ func NewWSServer(s *mux.Router) (*WSServer, error) {
 
 	wsServer := WSServer{
 		upg:     &upg,
-		ChanMap: make(map[string]chan MessageUpdate),
+		ChanMap: make(map[string]*WSConnectionMap),
 	}
 
 	s.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -142,4 +161,24 @@ func NewWSServer(s *mux.Router) (*WSServer, error) {
 	fmt.Println("Web socket ready!")
 
 	return &wsServer, nil
+}
+
+func (wsServer *WSServer) SendMessageToSession(sessionId string, msg MessageUpdate) {
+	wsServer.mutex.RLock()
+	defer wsServer.mutex.RUnlock()
+
+	if wsServer.ChanMap[sessionId] == nil {
+		fmt.Printf("Do nothing since the session \"%s\" does not exist\n", sessionId)
+		return
+	}
+
+	for _, conn := range wsServer.ChanMap[sessionId].MessageConnChan {
+		conn <- msg
+	}
+}
+
+func (wsServer *WSServer) SendMessageToSessions(sessionIds []string, msg MessageUpdate) {
+	for _, session := range sessionIds {
+		wsServer.SendMessageToSession(session, msg)
+	}
 }

@@ -106,8 +106,7 @@ func main() {
 	msgChanConfig.Router = r
 
 	msgChanEmitter := NewMessageChannel(msgChanConfig)
-
-	msgC := msgChanEmitter.UpdateEmitter()
+	msgHub := NewMessageHub()
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
@@ -133,9 +132,10 @@ func main() {
 	go func() {
 		for {
 			select {
-			case msg := <-msgC:
+			case msg := <-msgChanEmitter.UpdateEmitter():
 				fmt.Printf("%#v\n", msg)
-				sendMessage(wsServer.ChanMap, msg)
+				sessionIds := msgHub.GetSessionId(msg.ExtraFields)
+				wsServer.SendMessageToSessions(sessionIds, msg)
 			case _ = <-sc:
 				fmt.Println("End Server!")
 				if err := server.Close(); err != nil {

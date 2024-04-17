@@ -16,6 +16,13 @@ type HubResourceInfo struct {
 	SpecificInfo any
 }
 
+func NewMessageHub() *MessageHub {
+	return &MessageHub{
+		discordHub: hubs.NewDiscordResourceHub(),
+		youtubeHub: hubs.NewYoutubeResourceHub(),
+	}
+}
+
 func (m *MessageHub) GetSessionId(resourceInfo any) []string {
 	hubResourceInfo, ok := resourceInfo.(HubResourceInfo)
 	if !ok {
