@@ -156,7 +156,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 			sessionFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
-
 			sessionQuery, args := extractSessionFilter(sessionFilter)
 
 			var sessions []models.GORMSession

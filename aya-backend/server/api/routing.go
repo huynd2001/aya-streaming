@@ -58,11 +58,9 @@ type ModelGenerator func() any
 
 // inputParsingMiddleware resolves the filter data
 func inputParsingMiddleware(modelGenerator ModelGenerator) mux.MiddlewareFunc {
-	dataModel := modelGenerator()
-
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-
+			dataModel := modelGenerator()
 			switch req.Method {
 			case http.MethodOptions:
 				next.ServeHTTP(writer, req)
