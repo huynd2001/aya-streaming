@@ -22,7 +22,7 @@ jobs:
           go-version: '1.22'
 
       - name: Build Aya Db Migrations
-        run: go build -v -C aya-backend/db-migrations
+        run: go build -C aya-backend/db-migrations -v
 
       - name: Build Aya Server
-        run: go build -v -C aya-backend/server
+        run: go build -C aya-backend/server -v
