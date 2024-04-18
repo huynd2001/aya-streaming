@@ -1,10 +1,12 @@
 export interface SessionDialogInfo {
   id?: number;
   resources: {
-    resourcesType: string;
-    discordChannelId?: string;
-    discordGuildId?: string;
-    youtubeChannelId?: string;
+    resourceType: string;
+    resourceInfo: {
+      discordChannelId?: string;
+      discordGuildId?: string;
+      youtubeChannelId?: string;
+    };
   }[];
 }
 

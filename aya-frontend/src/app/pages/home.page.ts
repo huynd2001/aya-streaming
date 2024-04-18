@@ -22,7 +22,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
 import { SessionInfoService } from '../services/session-info.service';
 import { SessionInfo } from '../interfaces/session';
-import { MatCard, MatCardContent, MatCardHeader } from '@angular/material/card';
+import {
+  MatCard,
+  MatCardActions,
+  MatCardContent,
+  MatCardHeader,
+} from '@angular/material/card';
+import { MatDivider } from '@angular/material/divider';
+import { YesNoDialogComponent } from '../components/yes-no-dialog/yes-no-dialog.component';
 
 @Component({
   selector: 'app-home',
@@ -40,6 +47,8 @@ import { MatCard, MatCardContent, MatCardHeader } from '@angular/material/card';
     MatCard,
     MatCardContent,
     MatCardHeader,
+    MatCardActions,
+    MatDivider,
   ],
   templateUrl: 'home.page.html',
   styleUrl: 'home.page.css',
@@ -235,6 +244,35 @@ export default class HomePage implements OnInit, OnDestroy {
           });
       }
     });
+  }
+
+  openEditDialog(id: number) {
+    if (!this.sessionInfo) {
+      return;
+    }
+    if (id < 0 || id >= this.sessionInfo.length) {
+      return;
+    }
+    const dialogRef = this.dialog.open(SessionDialogComponent, {
+      data: {
+        id: this.sessionInfo[id].ID,
+        resources: JSON.parse(this.sessionInfo[id].Resources),
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((sessionInfoDialog) => {});
+  }
+
+  openDeleteDialog(id: number) {
+    if (!this.sessionInfo) {
+      return;
+    }
+    if (id < 0 || id >= this.sessionInfo.length) {
+      return;
+    }
+    const dialogRef = this.dialog.open(YesNoDialogComponent);
+
+    dialogRef.afterClosed().subscribe((userCollect) => {});
   }
 
   protected readonly open = open;

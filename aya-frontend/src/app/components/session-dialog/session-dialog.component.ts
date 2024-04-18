@@ -33,8 +33,12 @@ function sessionValidator(): ValidatorFn {
     const resourceType = control.get('resourceType')?.value;
     switch (resourceType) {
       case 'discord':
-        const discordChannelId = control.get('discordChannelId')?.value;
-        const discordGuildId = control.get('discordGuildId')?.value;
+        const discordChannelId = control
+          .get('resourceInfo')
+          ?.get('discordChannelId')?.value;
+        const discordGuildId = control
+          .get('resourceInfo')
+          ?.get('discordGuildId')?.value;
         let validationError = {};
         if (!discordChannelId) {
           validationError = {
@@ -55,7 +59,9 @@ function sessionValidator(): ValidatorFn {
         }
 
       case 'youtube':
-        const youtubeChannelId = control.get('youtubeChannelId')?.value;
+        const youtubeChannelId = control
+          .get('resourceInfo')
+          ?.get('youtubeChannelId')?.value;
         if (!youtubeChannelId) {
           return {
             missingYoutubeChannelId: true,
@@ -98,16 +104,45 @@ function sessionValidator(): ValidatorFn {
 export class SessionDialogComponent implements OnInit {
   constructor(
     public dialogRef: MatDialogRef<SessionDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: SessionDialogInfo
+    @Inject(MAT_DIALOG_DATA) public data: SessionDialogInfo | undefined
   ) {}
-
-  private readonly formBuilder = inject(FormBuilder);
 
   sessionFormGroup = new FormGroup({
     resources: new FormArray([], {
       validators: [Validators.maxLength(3), Validators.minLength(0)],
     }),
   });
+
+  ngOnInit(): void {
+    console.log(this.data);
+    if (this.data) {
+      for (let resource of this.data.resources) {
+        this.resources.push(
+          new FormGroup(
+            {
+              resourceType: new FormControl(resource.resourceType || 'discord'),
+              resourceInfo: new FormGroup({
+                discordChannelId: new FormControl(
+                  resource.resourceInfo.discordChannelId || ''
+                ),
+                discordGuildId: new FormControl(
+                  resource.resourceInfo.discordGuildId || ''
+                ),
+                youtubeChannelId: new FormControl(
+                  resource.resourceInfo.youtubeChannelId || ''
+                ),
+              }),
+            },
+            {
+              validators: [sessionValidator()],
+            }
+          )
+        );
+      }
+    }
+  }
+
+  private readonly formBuilder = inject(FormBuilder);
 
   get resources() {
     return this.sessionFormGroup.get('resources') as FormArray;
@@ -118,9 +153,11 @@ export class SessionDialogComponent implements OnInit {
       new FormGroup(
         {
           resourceType: new FormControl('discord'),
-          discordChannelId: new FormControl(''),
-          discordGuildId: new FormControl(''),
-          youtubeChannelId: new FormControl(''),
+          resourceInfo: new FormGroup({
+            discordChannelId: new FormControl(''),
+            discordGuildId: new FormControl(''),
+            youtubeChannelId: new FormControl(''),
+          }),
         },
         {
           validators: [sessionValidator()],
@@ -148,10 +185,40 @@ export class SessionDialogComponent implements OnInit {
     return form as FormRecord;
   }
 
-  protected readonly String = String;
-  protected readonly Validators = Validators;
-
-  ngOnInit(): void {}
-
-  protected readonly JSON = JSON;
+  retrieveValue() {
+    let dialogInfo = this.sessionFormGroup.value as SessionDialogInfo;
+    let retDialog: SessionDialogInfo = {
+      id: this.data?.id,
+      resources: [],
+    };
+    for (let resource of dialogInfo.resources) {
+      let newResource: {
+        resourceType: string;
+        resourceInfo: {
+          discordGuildId?: string;
+          discordChannelId?: string;
+          youtubeChannelId?: string;
+        };
+      } = {
+        resourceType: resource.resourceType,
+        resourceInfo: {},
+      };
+      switch (resource.resourceType) {
+        case 'discord':
+          newResource.resourceInfo.discordGuildId =
+            resource.resourceInfo.discordGuildId;
+          newResource.resourceInfo.discordChannelId =
+            resource.resourceInfo.discordChannelId;
+          break;
+        case 'youtube':
+          newResource.resourceInfo.youtubeChannelId =
+            resource.resourceInfo.youtubeChannelId;
+          break;
+        default:
+          break;
+      }
+      retDialog.resources.push(newResource);
+    }
+    return retDialog;
+  }
 }
