@@ -1,4 +1,4 @@
-import { Component, Inject, inject, Input, OnInit } from '@angular/core';
+import { Component, Inject, inject, OnInit } from '@angular/core';
 import { MatFormField } from '@angular/material/form-field';
 import {
   AbstractControl,
@@ -19,6 +19,7 @@ import {
   MatDialogActions,
   MatDialogClose,
   MatDialogContent,
+  MatDialogModule,
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
@@ -85,6 +86,7 @@ function sessionValidator(): ValidatorFn {
     FormsModule,
     MatInput,
     MatButton,
+    MatDialogModule,
     MatDialogTitle,
     MatDialogContent,
     MatDialogActions,
@@ -97,6 +99,15 @@ function sessionValidator(): ValidatorFn {
     MatFormField,
     MatInputModule,
     MatToolbar,
+  ],
+  providers: [
+    {
+      provide: MAT_DIALOG_DATA,
+      useValue: {
+        resources: [],
+      },
+    },
+    { provide: MatDialogRef, useValue: {} },
   ],
   templateUrl: 'session-dialog.component.html',
   styleUrl: 'session-dialog.component.css',
