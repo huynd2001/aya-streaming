@@ -8,10 +8,9 @@ describe('YesNoDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [YesNoDialogComponent]
-    })
-    .compileComponents();
-    
+      imports: [YesNoDialogComponent],
+    }).compileComponents();
+
     fixture = TestBed.createComponent(YesNoDialogComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

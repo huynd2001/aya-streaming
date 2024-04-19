@@ -1,41 +1,50 @@
 @if (displayMsg) {
   <div class="row message-object" [@push]="getState()">
-
     <div class="col-1 message-source">
-      <img [alt]="displayMsg.message.source" [src]="getSource()" class="message-source-svg">
+      <img
+        [alt]="displayMsg.message.source"
+        [src]="getSource()"
+        class="message-source-svg"
+      />
     </div>
 
     <div class="col-4 author">
       <i style="color: silver" [class]="getIcon()"></i>
-      <span [style.color]="displayMsg.message.author.color"><b> {{ displayMsg.message.author.username }}</b></span>
+      <span [style.color]="displayMsg.message.author.color">
+        <b> {{ displayMsg.message.author.username }}</b>
+      </span>
     </div>
 
     <div class="col-7">
       @if (!displayMsg.delete) {
-
         <div class="message">
           @if (displayMsg.edit) {
             <span><i>(edited) </i></span>
           }
 
           @for (msgPart of displayMsg.message.messageParts; track $index) {
-
             @if (msgPart.format) {
-              <span [style.color]="msgPart.format.color"><b>{{ msgPart.content }}</b></span>
+              <span [style.color]="msgPart.format.color">
+                <b>{{ msgPart.content }}</b>
+              </span>
             } @else {
               <span>{{ msgPart.content }}</span>
             }
 
             @if (msgPart.emoji) {
-              <img [alt]="msgPart.emoji.alt" [src]="msgPart.emoji.id" class="message-emoji"/>
+              <img
+                [alt]="msgPart.emoji.alt"
+                [src]="msgPart.emoji.id"
+                class="message-emoji"
+              />
             }
-
           }
         </div>
         <div class="attachment-container">
           @for (attachment of displayMsg.message.attachments; track $index) {
-            <span class="attachment badge rounded-pill bg-secondary"><i
-              class="bi bi-paperclip"></i>{{ attachment }}</span>
+            <span class="attachment badge rounded-pill bg-secondary">
+              <i class="bi bi-paperclip"></i>{{ attachment }}
+            </span>
           }
         </div>
       } @else {
@@ -43,9 +52,6 @@
           <i>(deleted)</i>
         </div>
       }
-
     </div>
   </div>
-} @else {
-
-}
+} @else {}

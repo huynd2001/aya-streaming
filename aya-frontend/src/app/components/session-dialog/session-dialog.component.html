@@ -4,7 +4,6 @@
     <button mat-icon-button (click)="pushNewForm()">
       <mat-icon>add_circle</mat-icon>
     </button>
-
   </mat-toolbar>
   <div [formGroup]="sessionFormGroup">
     <div formArrayName="resources">
@@ -17,22 +16,26 @@
               <mat-option value="youtube">Youtube</mat-option>
             </mat-select>
           </mat-form-field>
-          @if (getAsFormGroup(resource).get('resourceType')?.value === 'discord') {
+          @if (
+            getAsFormGroup(resource).get("resourceType")?.value === "discord"
+          ) {
             <div formGroupName="resourceInfo">
               <mat-form-field>
                 <mat-label>Guild ID</mat-label>
-                <input matInput formControlName="discordGuildId">
+                <input matInput formControlName="discordGuildId" />
               </mat-form-field>
               <mat-form-field>
                 <mat-label>Channel ID</mat-label>
-                <input matInput formControlName="discordChannelId">
+                <input matInput formControlName="discordChannelId" />
               </mat-form-field>
             </div>
-          } @else if (getAsFormGroup(resource).get('resourceType')?.value === 'youtube') {
+          } @else if (
+            getAsFormGroup(resource).get("resourceType")?.value === "youtube"
+          ) {
             <div formGroupName="resourceInfo">
               <mat-form-field>
                 <mat-label>Channel ID</mat-label>
-                <input matInput formControlName="youtubeChannelId">
+                <input matInput formControlName="youtubeChannelId" />
               </mat-form-field>
             </div>
           }
@@ -46,5 +49,11 @@
 </mat-dialog-content>
 <mat-dialog-actions>
   <button mat-button (click)="onNoClick()">Cancel</button>
-  <button mat-button [mat-dialog-close]="retrieveValue()" [disabled]="!sessionFormGroup.valid">Submit</button>
+  <button
+    mat-button
+    [mat-dialog-close]="retrieveValue()"
+    [disabled]="!sessionFormGroup.valid"
+  >
+    Submit
+  </button>
 </mat-dialog-actions>

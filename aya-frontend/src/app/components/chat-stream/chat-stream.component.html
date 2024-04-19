@@ -1,13 +1,20 @@
-<div class = "display"
-     [style.width.px]="width" [style.height.px]="height"
-     [style.max-width.px]="width" [style.max-height.px]="height"
-     [style.background-color]="getColor(44, 47, 51)">
+<div
+  class="display"
+  [style.width.px]="width"
+  [style.height.px]="height"
+  [style.max-width.px]="width"
+  [style.max-height.px]="height"
+  [style.background-color]="getColor(44, 47, 51)"
+>
   @if (!isConnected) {
-    <div [style.width.px]="width" [style.height.px]="height"
-      [style.max-width.px]="width" [style.max-height.px]="height"
-      class="d-flex justify-content-center align-items-center">
-      <div class="spinner-grow text-info" role="status">
-      </div>
+    <div
+      [style.width.px]="width"
+      [style.height.px]="height"
+      [style.max-width.px]="width"
+      [style.max-height.px]="height"
+      class="d-flex justify-content-center align-items-center"
+    >
+      <div class="spinner-grow text-info" role="status"></div>
     </div>
   }
   <div class="container message-container">

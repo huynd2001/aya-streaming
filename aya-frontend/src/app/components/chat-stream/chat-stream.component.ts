@@ -80,7 +80,7 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
       }
       case 'edit': {
         let displayMsg = this.displayMessages.find(
-          (dMsg) => dMsg.message.id == msg.id
+          (dMsg) => dMsg.message.id == msg.id,
         );
         if (displayMsg) {
           displayMsg.message = msg;
@@ -90,7 +90,7 @@ export class ChatStreamComponent implements OnInit, OnDestroy {
       }
       case 'delete': {
         let displayMsg = this.displayMessages.find(
-          (dMsg) => dMsg.message.id == msg.id
+          (dMsg) => dMsg.message.id == msg.id,
         );
         if (displayMsg) {
           displayMsg.delete = true;

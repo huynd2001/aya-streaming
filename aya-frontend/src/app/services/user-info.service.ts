@@ -29,7 +29,7 @@ export class UserInfoService {
               data: undefined,
               err: String(err),
             });
-          }
+          },
         ),
         switchMap(({ data, err }) => {
           if (!data && err === 'Cannot find the profile') {
@@ -40,7 +40,7 @@ export class UserInfoService {
               err: err,
             });
           }
-        })
+        }),
       );
   }
 
@@ -55,7 +55,7 @@ export class UserInfoService {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
+        },
       )
       .pipe(
         catchError((err: any) => {
@@ -64,7 +64,7 @@ export class UserInfoService {
             data: undefined,
             err: String(err),
           });
-        })
+        }),
       );
   }
 }

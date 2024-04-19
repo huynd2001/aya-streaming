@@ -21,6 +21,9 @@ jobs:
       - name: Install packages
         run: cd ./aya-frontend && npm install
 
+      - name: Linter
+        run: cd ./aya-frontend && npx prettier . --check
+
       - name: Run Test
         run: cd ./aya-frontend && npm run test
 

@@ -106,7 +106,7 @@ function sessionValidator(): ValidatorFn {
 export class SessionDialogComponent implements OnInit {
   constructor(
     public dialogRef: MatDialogRef<SessionDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: SessionDialogInfo | undefined
+    @Inject(MAT_DIALOG_DATA) public data: SessionDialogInfo | undefined,
   ) {}
 
   sessionFormGroup = new FormGroup({
@@ -130,24 +130,24 @@ export class SessionDialogComponent implements OnInit {
           new FormGroup(
             {
               resourceType: new FormControl(
-                resource?.resourceType || 'discord'
+                resource?.resourceType || 'discord',
               ),
               resourceInfo: new FormGroup({
                 discordChannelId: new FormControl(
-                  resource?.resourceInfo?.discordChannelId || ''
+                  resource?.resourceInfo?.discordChannelId || '',
                 ),
                 discordGuildId: new FormControl(
-                  resource?.resourceInfo?.discordGuildId || ''
+                  resource?.resourceInfo?.discordGuildId || '',
                 ),
                 youtubeChannelId: new FormControl(
-                  resource?.resourceInfo?.youtubeChannelId || ''
+                  resource?.resourceInfo?.youtubeChannelId || '',
                 ),
               }),
             },
             {
               validators: [sessionValidator()],
-            }
-          )
+            },
+          ),
         );
       }
     }
@@ -179,8 +179,8 @@ export class SessionDialogComponent implements OnInit {
         },
         {
           validators: [sessionValidator()],
-        }
-      )
+        },
+      ),
     );
   }
 

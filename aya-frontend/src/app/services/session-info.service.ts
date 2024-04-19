@@ -29,15 +29,15 @@ export class SessionInfoService {
               data: undefined,
               err: String(err),
             });
-          }
-        )
+          },
+        ),
       );
   }
 
   newSession$(
     accessToken: string,
     userId: number,
-    sessionDialogInfo: SessionDialogInfo
+    sessionDialogInfo: SessionDialogInfo,
   ) {
     return this.http.post<{ data?: SessionInfo; err?: string }>(
       sessionInfoUrl,
@@ -49,7 +49,7 @@ export class SessionInfoService {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
   }
 }

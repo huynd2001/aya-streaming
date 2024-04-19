@@ -22,26 +22,26 @@ import { DisplayMessage } from '../../interfaces/message';
         style({
           height: '0px',
           opacity: 0,
-        })
+        }),
       ),
       state(
         'loaded',
         style({
           opacity: 1,
-        })
+        }),
       ),
       state(
         'removed',
         style({
           opacity: 0,
-        })
+        }),
       ),
       state(
         'deleted',
         style({
           height: '0px',
           opacity: 0,
-        })
+        }),
       ),
       transition('init => loaded', [animate('0.3s')]),
       transition('loaded => removed', [animate('0.3s')]),

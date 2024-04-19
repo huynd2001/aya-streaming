@@ -80,7 +80,7 @@ export default class HomePage implements OnInit, OnDestroy {
   constructor() {
     this.matIconRegistry.addSvgIcon(
       `aya_logo`,
-      this.domSanitizer.bypassSecurityTrustResourceUrl('/aya.svg')
+      this.domSanitizer.bypassSecurityTrustResourceUrl('/aya.svg'),
     );
   }
 
@@ -95,11 +95,11 @@ export default class HomePage implements OnInit, OnDestroy {
           let email = loginResponse.userData['email'];
           return this.userInfoService.getUserInfo$(
             loginResponse.accessToken,
-            email
+            email,
           );
         } else {
           return throwError(
-            () => new Error('No user data yet. Please log in!')
+            () => new Error('No user data yet. Please log in!'),
           );
         }
       }),
@@ -112,17 +112,17 @@ export default class HomePage implements OnInit, OnDestroy {
           throw new Error('No data found');
         }
       }),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.isAuth$ = loginAttempt$.pipe(
       map((loginAttempt) => loginAttempt.isAuthenticated),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.accessToken$ = loginAttempt$.pipe(
       map((loginAttempt) => loginAttempt.accessToken),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.sessionInfo$ = combineLatest([this.userInfo$, this.accessToken$]).pipe(
@@ -130,7 +130,7 @@ export default class HomePage implements OnInit, OnDestroy {
         console.log('get all session?');
         return this.sessionInfoService.getAllSessions$(
           accessToken,
-          userInfo.ID
+          userInfo.ID,
         );
       }),
       map(({ data, err }) => {
@@ -142,7 +142,7 @@ export default class HomePage implements OnInit, OnDestroy {
           throw new Error('No data found');
         }
       }),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.isLoading$ = combineLatest([
@@ -153,7 +153,7 @@ export default class HomePage implements OnInit, OnDestroy {
       map(([loginAttempt, userInfo, sessionsInfo]) => {
         return false;
       }),
-      shareReplay(1)
+      shareReplay(1),
     );
 
     this.sessionInfoSubscription.add(
@@ -165,7 +165,7 @@ export default class HomePage implements OnInit, OnDestroy {
           console.error('Cannot retrieve session info from backend');
           console.error(err);
         },
-      })
+      }),
     );
 
     this.userInfoSubscription.add(
@@ -177,7 +177,7 @@ export default class HomePage implements OnInit, OnDestroy {
           console.error('Cannot retrieve user info from backend');
           console.error(err);
         },
-      })
+      }),
     );
 
     this.authSubscription.add(
@@ -188,7 +188,7 @@ export default class HomePage implements OnInit, OnDestroy {
         error: (err) => {
           console.error(err);
         },
-      })
+      }),
     );
 
     this.isLoadingSubscription.add(
@@ -199,7 +199,7 @@ export default class HomePage implements OnInit, OnDestroy {
         error: (err) => {
           console.log(err);
         },
-      })
+      }),
     );
   }
 
@@ -230,9 +230,9 @@ export default class HomePage implements OnInit, OnDestroy {
               return this.sessionInfoService.newSession$(
                 accessToken,
                 userInfo.ID,
-                sessionInfoDialog
+                sessionInfoDialog,
               );
-            })
+            }),
           )
           .subscribe({
             next: (value) => {
