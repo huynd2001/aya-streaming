@@ -1,42 +1,46 @@
 <mat-dialog-content>
   <mat-toolbar>
-<span>New Session</span>
-    <button mat-icon-button (click)="pushNewForm()"><mat-icon>add_circle</mat-icon></button>
+    <span>New Session</span>
+    <button mat-icon-button (click)="pushNewForm()">
+      <mat-icon>add_circle</mat-icon>
+    </button>
 
   </mat-toolbar>
   <div [formGroup]="sessionFormGroup">
     <div formArrayName="resources">
-    @for (resource of resources.controls; track $index) {
-      <div [formGroup]="getAsFormGroup(resource)">
-        <mat-form-field>
-          <mat-label>Resource Type</mat-label>
-          <mat-select  formControlName="resourceType">
-            <mat-option value="discord">Discord</mat-option>
-            <mat-option value="youtube">Youtube</mat-option>
-          </mat-select>
-        </mat-form-field>
-        @if (getAsFormGroup(resource).get('resourceType')?.value === 'discord') {
-          <div formGroupName="resourceInfo">
-            <mat-form-field>
-              <mat-label>Guild ID</mat-label>
-              <input matInput formControlName="discordGuildId">
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Channel ID</mat-label>
-              <input matInput formControlName="discordChannelId">
-            </mat-form-field>
-          </div>
-        } @else if (getAsFormGroup(resource).get('resourceType')?.value === 'youtube') {
-          <div>
-            <mat-form-field>
-              <mat-label>Channel ID</mat-label>
-              <input matInput formControlName="youtubeChannelId">
-            </mat-form-field>
-          </div>
-        }
-        <button mat-icon-button (click)="deleteForm($index)"><mat-icon>delete</mat-icon></button>
-      </div>
-    }
+      @for (resource of resources.controls; track $index) {
+        <div [formGroup]="getAsFormGroup(resource)">
+          <mat-form-field>
+            <mat-label>Resource Type</mat-label>
+            <mat-select formControlName="resourceType">
+              <mat-option value="discord">Discord</mat-option>
+              <mat-option value="youtube">Youtube</mat-option>
+            </mat-select>
+          </mat-form-field>
+          @if (getAsFormGroup(resource).get('resourceType')?.value === 'discord') {
+            <div formGroupName="resourceInfo">
+              <mat-form-field>
+                <mat-label>Guild ID</mat-label>
+                <input matInput formControlName="discordGuildId">
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Channel ID</mat-label>
+                <input matInput formControlName="discordChannelId">
+              </mat-form-field>
+            </div>
+          } @else if (getAsFormGroup(resource).get('resourceType')?.value === 'youtube') {
+            <div formGroupName="resourceInfo">
+              <mat-form-field>
+                <mat-label>Channel ID</mat-label>
+                <input matInput formControlName="youtubeChannelId">
+              </mat-form-field>
+            </div>
+          }
+          <button mat-icon-button (click)="deleteForm($index)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      }
     </div>
   </div>
 </mat-dialog-content>

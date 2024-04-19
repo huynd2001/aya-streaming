@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SessionDialogComponent } from './session-dialog.component';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 describe('SessionDialogComponent', () => {
   let component: SessionDialogComponent;
@@ -10,6 +10,15 @@ describe('SessionDialogComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SessionDialogComponent],
+      providers: [
+        {
+          provide: MAT_DIALOG_DATA,
+          useValue: {
+            resources: [],
+          },
+        },
+        { provide: MatDialogRef, useValue: {} },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SessionDialogComponent);

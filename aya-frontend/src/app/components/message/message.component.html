@@ -7,12 +7,11 @@
 
     <div class="col-4 author">
       <i style="color: silver" [class]="getIcon()"></i>
-      <span [style.color]="displayMsg.message.author.color"><b> {{displayMsg.message.author.username}}</b></span>
+      <span [style.color]="displayMsg.message.author.color"><b> {{ displayMsg.message.author.username }}</b></span>
     </div>
 
     <div class="col-7">
       @if (!displayMsg.delete) {
-
 
         <div class="message">
           @if (displayMsg.edit) {
@@ -22,10 +21,9 @@
           @for (msgPart of displayMsg.message.messageParts; track $index) {
 
             @if (msgPart.format) {
-              <span [style.color]="msgPart.format.color"><b>{{msgPart.content}}</b></span>
-            }
-            @else {
-              <span>{{msgPart.content}}</span>
+              <span [style.color]="msgPart.format.color"><b>{{ msgPart.content }}</b></span>
+            } @else {
+              <span>{{ msgPart.content }}</span>
             }
 
             @if (msgPart.emoji) {
@@ -36,11 +34,11 @@
         </div>
         <div class="attachment-container">
           @for (attachment of displayMsg.message.attachments; track $index) {
-            <span class="attachment badge rounded-pill bg-secondary"><i class="bi bi-paperclip"></i>{{attachment}}</span>
+            <span class="attachment badge rounded-pill bg-secondary"><i
+              class="bi bi-paperclip"></i>{{ attachment }}</span>
           }
         </div>
-      }
-      @else {
+      } @else {
         <div class="message">
           <i>(deleted)</i>
         </div>

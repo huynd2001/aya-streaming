@@ -253,6 +253,7 @@ export default class HomePage implements OnInit, OnDestroy {
     if (id < 0 || id >= this.sessionInfo.length) {
       return;
     }
+
     const dialogRef = this.dialog.open(SessionDialogComponent, {
       data: {
         id: this.sessionInfo[id].ID,

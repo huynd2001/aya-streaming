@@ -13,6 +13,7 @@ import { DisplayMessage } from '../../interfaces/message';
   standalone: true,
   imports: [],
   templateUrl: 'message.component.html',
+
   styleUrl: 'message.component.css',
   animations: [
     trigger('push', [
@@ -50,6 +51,7 @@ import { DisplayMessage } from '../../interfaces/message';
 })
 export class MessageComponent implements OnInit {
   @Input() displayMsg: DisplayMessage | undefined;
+
   ngOnInit(): void {
     // IDK why but I put this in my legacy code
   }

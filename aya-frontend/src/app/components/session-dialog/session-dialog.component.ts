@@ -100,15 +100,6 @@ function sessionValidator(): ValidatorFn {
     MatInputModule,
     MatToolbar,
   ],
-  providers: [
-    {
-      provide: MAT_DIALOG_DATA,
-      useValue: {
-        resources: [],
-      },
-    },
-    { provide: MatDialogRef, useValue: {} },
-  ],
   templateUrl: 'session-dialog.component.html',
   styleUrl: 'session-dialog.component.css',
 })
@@ -124,23 +115,32 @@ export class SessionDialogComponent implements OnInit {
     }),
   });
 
-  ngOnInit(): void {
-    console.log(this.data);
+  validate(inputData: any) {
+    return (
+      inputData == undefined ||
+      ((inputData.id === undefined || typeof inputData.id === 'number') &&
+        Array.isArray(inputData.resources))
+    );
+  }
+
+  populateForm() {
     if (this.data) {
       for (let resource of this.data.resources) {
         this.resources.push(
           new FormGroup(
             {
-              resourceType: new FormControl(resource.resourceType || 'discord'),
+              resourceType: new FormControl(
+                resource?.resourceType || 'discord'
+              ),
               resourceInfo: new FormGroup({
                 discordChannelId: new FormControl(
-                  resource.resourceInfo.discordChannelId || ''
+                  resource?.resourceInfo?.discordChannelId || ''
                 ),
                 discordGuildId: new FormControl(
-                  resource.resourceInfo.discordGuildId || ''
+                  resource?.resourceInfo?.discordGuildId || ''
                 ),
                 youtubeChannelId: new FormControl(
-                  resource.resourceInfo.youtubeChannelId || ''
+                  resource?.resourceInfo?.youtubeChannelId || ''
                 ),
               }),
             },
@@ -150,6 +150,13 @@ export class SessionDialogComponent implements OnInit {
           )
         );
       }
+    }
+  }
+
+  ngOnInit(): void {
+    if (this.validate(this.data)) {
+      this.populateForm();
+    } else {
     }
   }
 
