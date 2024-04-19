@@ -88,7 +88,14 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			userFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
+			userFilter, ok := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
+
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "User not found")))
+				return
+			}
 
 			userQuery, args := extractUserFilter(userFilter)
 			var user models.GORMUser
@@ -118,7 +125,13 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodPost).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			userFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
+			userFilter, ok := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*UserFilter)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "user not found")))
+				return
+			}
 
 			userQuery := models.GORMUser{
 				Email: *userFilter.Email,
