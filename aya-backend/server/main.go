@@ -2,7 +2,6 @@ package main
 
 import (
 	"aya-backend/server/api"
-	. "aya-backend/server/service"
 	"aya-backend/server/socket"
 	"errors"
 	"fmt"
@@ -28,13 +27,6 @@ const (
 
 	REDIRECT_URL_ENV = "REDIRECT_URL"
 )
-
-func sendMessage(chanMap map[string]chan MessageUpdate, msg MessageUpdate) {
-	for key, value := range chanMap {
-		fmt.Printf("Sent message to channel %s\n", key)
-		value <- msg
-	}
-}
 
 func getDB() (*gorm.DB, error) {
 	var dataLocation string
@@ -136,7 +128,7 @@ func main() {
 				fmt.Printf("%#v\n", msg)
 				sessionIds := msgHub.GetSessionId(msg.ExtraFields)
 				wsServer.SendMessageToSessions(sessionIds, msg)
-			case _ = <-sc:
+			case <-sc:
 				fmt.Println("End Server!")
 				if err := server.Close(); err != nil {
 					fmt.Printf("Error when closing server: %s\n", err.Error())
@@ -144,7 +136,6 @@ func main() {
 				if err := msgChanEmitter.CloseEmitter(); err != nil {
 					fmt.Printf("%s\n", err.Error())
 				}
-				return
 			}
 		}
 

@@ -161,7 +161,6 @@ func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 			writer.Header().Set("Access-Control-Allow-Origin", "*")
 			next.ServeHTTP(writer, req)
-			return
 		})
 	})
 	r.Use(jwtAuthMiddleware)
@@ -172,7 +171,7 @@ func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
 	user := r.PathPrefix("/user").Subrouter()
 	dbApiServer.NewUserApi(user)
 
-	fmt.Println("Finished setting up /api/*")
+	fmt.Println("Finished setting up API")
 
 	return &dbApiServer
 }

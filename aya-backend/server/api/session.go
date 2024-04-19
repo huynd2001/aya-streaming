@@ -149,7 +149,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 			writer.Header().Set("Allow", "OPTIONS, GET, POST, PUT, DELETE")
 			writer.WriteHeader(http.StatusNoContent)
-			return
 		})
 
 	r.PathPrefix("/").
@@ -175,7 +174,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(sessions, "")))
-			return
 
 		})
 
@@ -204,7 +202,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(newSession, "")))
-			return
 
 		})
 
@@ -244,7 +241,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
-			return
 
 		})
 
@@ -275,7 +271,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
-			return
+
 		})
 
 	fmt.Println("Finished setting up /session")

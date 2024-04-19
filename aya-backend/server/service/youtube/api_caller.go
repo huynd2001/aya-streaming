@@ -34,7 +34,7 @@ func (apiCaller *liveChatApiCaller) Start(ytService *yt.Service) {
 
 		for {
 			go func() {
-				sleepDuration := nextApiCall.Sub(time.Now())
+				sleepDuration := time.Until(nextApiCall)
 				if sleepDuration > 0 {
 					time.Sleep(sleepDuration)
 				}

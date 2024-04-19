@@ -83,7 +83,6 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 			writer.Header().Set("Allow", "OPTIONS, GET, POST")
 			writer.WriteHeader(http.StatusNoContent)
-			return
 		})
 
 	r.PathPrefix("/").
@@ -113,7 +112,6 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(user, "")))
-			return
 
 		})
 
@@ -160,7 +158,6 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte(marshalReturnData(newUser, "")))
-			return
 
 		})
 

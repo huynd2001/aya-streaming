@@ -20,12 +20,11 @@ func (register *discordRegister) register(guildId string, channelId string) {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
 	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)
-	if _, ok := register.guildChannelMap[guildChannel]; ok == true {
+	if _, ok := register.guildChannelMap[guildChannel]; ok {
 		// guildChannel already exists in the register
 		return
 	}
 	register.guildChannelMap[guildChannel] = true
-	return
 }
 
 func (register *discordRegister) deregister(guildId string, channelId string) {

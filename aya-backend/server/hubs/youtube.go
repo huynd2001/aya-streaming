@@ -50,7 +50,6 @@ func (hub *YoutubeResourceHub) RemoveSession(sessionId string) {
 		delete(hub.channel2Session[channelId], sessionId)
 	}
 	delete(hub.session2Channel, sessionId)
-	return
 }
 
 func (hub *YoutubeResourceHub) AddSession(sessionId string, resourceInfo any) {
