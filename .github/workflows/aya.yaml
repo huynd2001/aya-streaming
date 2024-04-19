@@ -1,4 +1,4 @@
-name: Aya-Streaming
+name: Aya-Build
 
 on:
   push:

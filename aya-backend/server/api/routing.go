@@ -172,5 +172,7 @@ func NewApiServer(db *gorm.DB, r *mux.Router) *DBApiServer {
 	user := r.PathPrefix("/user").Subrouter()
 	dbApiServer.NewUserApi(user)
 
+	fmt.Println("Finished setting up /api/*")
+
 	return &dbApiServer
 }

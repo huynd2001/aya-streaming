@@ -163,4 +163,6 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			return
 
 		})
+
+	fmt.Println("Finished setting up /user")
 }

@@ -277,4 +277,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 			_, _ = writer.Write([]byte(marshalReturnData(session, "")))
 			return
 		})
+
+	fmt.Println("Finished setting up /session")
 }

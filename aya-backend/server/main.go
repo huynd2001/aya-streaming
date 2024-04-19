@@ -127,7 +127,7 @@ func main() {
 	api.NewApiServer(db, apiRouter)
 
 	http.Handle("/", r)
-	fmt.Println("Ready to send messages through web sockets!")
+	fmt.Println("Server's up and running!")
 
 	go func() {
 		for {
