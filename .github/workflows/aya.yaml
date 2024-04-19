@@ -1,4 +1,4 @@
-name: Aya-Backend
+name: Aya-Streaming
 
 on:
   push:
@@ -7,6 +7,25 @@ on:
     branches: [ "main" ]
 
 jobs:
+
+  build-aya-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install packages
+        run: cd ./aya-frontend && npm install
+
+      - name: Run Test
+        run: cd ./aya-frontend && npm run test
+
+      - name: Build Aya-Frontend
+        run: cd ./aya-frontend && npm run build
 
   build-aya-backend:
     runs-on: ubuntu-latest
