@@ -6,11 +6,6 @@ import (
 	dg "github.com/bwmarrin/discordgo"
 )
 
-type DiscordInfo struct {
-	DiscordGuildId   string
-	DiscordChannelId string
-}
-
 type DiscordEmitter struct {
 	service.ChatEmitter
 	updateEmitter chan service.MessageUpdate

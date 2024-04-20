@@ -12,10 +12,6 @@ import (
 	yt "google.golang.org/api/youtube/v3"
 )
 
-type YoutubeInfo struct {
-	YoutubeChannelId string
-}
-
 type YoutubeEmitterConfig struct {
 	UseApiKey    bool
 	UseOAuth     bool
