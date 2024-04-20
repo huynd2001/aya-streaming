@@ -58,8 +58,21 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 
 			newReqWithContext := req
 
-			sessionFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
-			jwtClaim := req.Context().Value(CONTEXT_KEY_JWT_CLAIM).(jwt.MapClaims)
+			sessionFilter, ok := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "session filter is required")))
+				return
+			}
+
+			jwtClaim, ok := req.Context().Value(CONTEXT_KEY_JWT_CLAIM).(jwt.MapClaims)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "jwt claim is required")))
+				return
+			}
 
 			sessionQuery, args := extractSessionFilter(sessionFilter)
 
@@ -154,7 +167,14 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodGet).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			sessionFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
+			sessionFilter, ok := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "session filter is required")))
+				return
+			}
+
 			sessionQuery, args := extractSessionFilter(sessionFilter)
 
 			var sessions []models.GORMSession
@@ -180,8 +200,21 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodPost).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			sessionFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
-			user := req.Context().Value(CONTEXT_KEY_USER).(*models.GORMUser)
+			sessionFilter, ok := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "session filter is required")))
+				return
+			}
+
+			user, ok := req.Context().Value(CONTEXT_KEY_USER).(*models.GORMUser)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "user not found!")))
+				return
+			}
 
 			newSession := models.GORMSession{
 				UserID:    *sessionFilter.UserID,
@@ -208,15 +241,22 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodPut).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			sessionFilter := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
-
-			if req.Context().Value(CONTEXT_KEY_SESSION) == nil {
+			sessionFilter, ok := req.Context().Value(CONTEXT_KEY_REQ_FILTER).(*SessionFilter)
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Missing required fields")))
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "session filter is required")))
 				return
 			}
 
-			session := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
+			session, ok := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
+
+			if !ok {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "session id is required")))
+				return
+			}
 
 			updateFilter := &SessionFilter{
 				IsOn:      sessionFilter.IsOn,
@@ -248,14 +288,14 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 		Methods(http.MethodDelete).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
-			if req.Context().Value(CONTEXT_KEY_SESSION) == nil {
+			session, ok := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
+
+			if !ok {
 				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "Missing required fields")))
 				return
 			}
-
-			session := req.Context().Value(CONTEXT_KEY_SESSION).(*models.GORMSession)
 
 			sessionResult := dbApiServer.db.
 				Delete(&session)

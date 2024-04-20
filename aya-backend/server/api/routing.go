@@ -65,7 +65,7 @@ func inputParsingMiddleware(modelGenerator ModelGenerator) mux.MiddlewareFunc {
 			case http.MethodOptions:
 				next.ServeHTTP(writer, req)
 				return
-			case http.MethodGet:
+			case http.MethodGet, http.MethodDelete:
 				reqQuery := req.URL.Query()
 				var decoder = schema.NewDecoder()
 				err := decoder.Decode(dataModel, reqQuery)

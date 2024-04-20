@@ -1,13 +1,6 @@
 export interface SessionDialogInfo {
   id?: number;
-  resources: {
-    resourceType: string;
-    resourceInfo: {
-      discordChannelId?: string;
-      discordGuildId?: string;
-      youtubeChannelId?: string;
-    };
-  }[];
+  resources: ResourceInfo[];
 }
 
 export interface SessionInfo {
@@ -16,4 +9,13 @@ export interface SessionInfo {
   IsOn: boolean;
   IsDelete: boolean;
   UserID: number;
+}
+
+export interface ResourceInfo {
+  resourceType: string;
+  resourceInfo: {
+    discordChannelId?: string;
+    discordGuildId?: string;
+    youtubeChannelId?: string;
+  };
 }
