@@ -21,7 +21,7 @@
     <mat-list>
       @if (isAuth) {
       <mat-list-item>
-        <span>User Id: {{userInfo?.ID}} Logged in!</span>
+        <span>User Id: {{ userInfo?.ID }} Logged in!</span>
       </mat-list-item>
 
       <mat-list-item>
@@ -38,8 +38,12 @@
 
 @if (sessionInfo) { @for (session of sessionInfo; track $index) {
 <mat-card>
-  <mat-card-header>Session ID: {{session.ID}}</mat-card-header>
-  <mat-card-content>Session Resources: {{session.Resources}}</mat-card-content>
+  <mat-card-header>Session ID: {{ session.ID }}</mat-card-header>
+  <mat-card-content>
+    <app-session-info-display
+      [displaySessionInfo]="session"
+    ></app-session-info-display>
+  </mat-card-content>
   <mat-card-actions>
     <button
       mat-icon-button

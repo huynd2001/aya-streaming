@@ -30,6 +30,8 @@ import {
 } from '@angular/material/card';
 import { MatDivider } from '@angular/material/divider';
 import { YesNoDialogComponent } from '../components/yes-no-dialog/yes-no-dialog.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { SessionInfoDisplayComponent } from '../components/session-info-display/session-info-display.component';
 
 @Component({
   selector: 'app-home',
@@ -49,6 +51,7 @@ import { YesNoDialogComponent } from '../components/yes-no-dialog/yes-no-dialog.
     MatCardHeader,
     MatCardActions,
     MatDivider,
+    SessionInfoDisplayComponent,
   ],
   templateUrl: 'home.page.html',
   styleUrl: 'home.page.css',
@@ -77,7 +80,7 @@ export default class HomePage implements OnInit, OnDestroy {
   private readonly domSanitizer = inject(DomSanitizer);
   private readonly dialog = inject(MatDialog);
 
-  constructor() {
+  constructor(private _snackBar: MatSnackBar) {
     this.matIconRegistry.addSvgIcon(
       `aya_logo`,
       this.domSanitizer.bypassSecurityTrustResourceUrl('/aya.svg'),
@@ -261,11 +264,12 @@ export default class HomePage implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe((sessionInfoDialog) => {
-      console.log(sessionInfoDialog);
       if (sessionInfoDialog) {
+        const sessionId = sessionInfoDialog.id;
         combineLatest([this.accessToken$, this.userInfo$])
           .pipe(
             switchMap(([accessToken, userInfo]) => {
+              this._snackBar.open('Loading...', 'Dismiss');
               return this.sessionInfoService.updateSession$(
                 accessToken,
                 userInfo.ID,
@@ -275,12 +279,23 @@ export default class HomePage implements OnInit, OnDestroy {
           )
           .subscribe({
             next: (value) => {
-              // console.log(value);
-              // TODO: new toast for success
+              this._snackBar.open(
+                `Update Session ${sessionId} Success!`,
+                'Dismiss',
+                {
+                  duration: 3000,
+                },
+              );
             },
             error: (err) => {
-              // console.error(err);
-              // TODO: new toast for error
+              console.error(err);
+              this._snackBar.open(
+                `Update Session ${sessionId} Failed!`,
+                'Dismiss',
+                {
+                  duration: 3000,
+                },
+              );
             },
           });
       }
@@ -310,12 +325,23 @@ export default class HomePage implements OnInit, OnDestroy {
           )
           .subscribe({
             next: (value) => {
-              // console.log(value);
-              // TODO: new toast for success
+              this._snackBar.open(
+                `Delete Session ${sessionId} Success!`,
+                'Dismiss',
+                {
+                  duration: 3000,
+                },
+              );
             },
             error: (err) => {
-              // console.error(err);
-              // TODO: new toast for error
+              console.error(err);
+              this._snackBar.open(
+                `Delete Session ${sessionId} Failed!`,
+                'Dismiss',
+                {
+                  duration: 3000,
+                },
+              );
             },
           });
       }

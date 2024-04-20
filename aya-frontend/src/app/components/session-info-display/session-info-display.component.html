@@ -1,0 +1,38 @@
+<mat-accordion>
+  @for (resource of resources; track $index) {
+    <mat-expansion-panel expanded>
+      @switch (resource.resourceType) {
+        @case ("discord") {
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon svgIcon="discord_logo"></mat-icon>
+            </mat-panel-title>
+            <mat-panel-description>Discord</mat-panel-description>
+          </mat-expansion-panel-header>
+          <p>
+            Guild Id: {{ resource.resourceInfo.discordGuildId }} Channel Id:
+            {{ resource.resourceInfo.discordChannelId }}
+          </p>
+        }
+        @case ("youtube") {
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon svgIcon="youtube_logo"></mat-icon>
+            </mat-panel-title>
+            <mat-panel-description>Youtube</mat-panel-description>
+          </mat-expansion-panel-header>
+          <p>Channel Id: {{ resource.resourceInfo.youtubeChannelId }}</p>
+        }
+        @case ("default") {
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon>error</mat-icon>
+            </mat-panel-title>
+            <mat-panel-description>Unknown</mat-panel-description>
+          </mat-expansion-panel-header>
+          <p>{{ JSON.stringify(resource) }}</p>
+        }
+      }
+    </mat-expansion-panel>
+  }
+</mat-accordion>
