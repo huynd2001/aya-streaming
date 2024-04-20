@@ -3,6 +3,7 @@ package api
 import (
 	models "aya-backend/db-models"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
@@ -11,6 +12,11 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+)
+
+const (
+	MAX_RESOURCES = 5
+	MIN_RESOURCES = 0
 )
 
 type SessionFilter struct {
@@ -155,6 +161,16 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 	}
 }
 
+func validateResource(resources []models.Resource) error {
+	if len(resources) < MIN_RESOURCES {
+		return fmt.Errorf("too little resource attached to session")
+	}
+	if len(resources) > MAX_RESOURCES {
+		return fmt.Errorf("too many resources attached to session")
+	}
+	return nil
+}
+
 func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 
 	r.Use(inputParsingMiddleware(func() any {
@@ -221,6 +237,24 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 				return
 			}
 
+			// validate the input resources
+			var resourceInfos []models.Resource
+			err := json.Unmarshal([]byte(*sessionFilter.Resources), &resourceInfos)
+			if err != nil {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Resource format not supported!")))
+				return
+			}
+
+			err = validateResource(resourceInfos)
+			if err != nil {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Resource format not supported!")))
+				return
+			}
+
 			newSession := models.GORMSession{
 				UserID:    *sessionFilter.UserID,
 				IsOn:      false,
@@ -260,6 +294,26 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 				writer.Header().Set("Content-Type", "application/json")
 				writer.WriteHeader(http.StatusBadRequest)
 				_, _ = writer.Write([]byte(marshalReturnData(nil, "session id is required")))
+				return
+			}
+
+			// validate the input resources
+			var resourceInfos []models.Resource
+			err := json.Unmarshal([]byte(*sessionFilter.Resources), &resourceInfos)
+			if err != nil {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, fmt.Sprintf("Resource format not supported: %s", err.Error()))))
+				return
+			}
+
+			fmt.Printf("%#v\n", resourceInfos)
+
+			err = validateResource(resourceInfos)
+			if err != nil {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusBadRequest)
+				_, _ = writer.Write([]byte(marshalReturnData(nil, fmt.Sprintf("Resource format not supported: %s", err.Error()))))
 				return
 			}
 
