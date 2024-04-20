@@ -127,7 +127,6 @@ export default class HomePage implements OnInit, OnDestroy {
 
     this.sessionInfo$ = combineLatest([this.userInfo$, this.accessToken$]).pipe(
       switchMap(([userInfo, accessToken]) => {
-        console.log('get all session?');
         return this.sessionInfoService.getAllSessions$(
           accessToken,
           userInfo.ID,
@@ -296,9 +295,30 @@ export default class HomePage implements OnInit, OnDestroy {
       return;
     }
     const dialogRef = this.dialog.open(YesNoDialogComponent);
-
+    let sessionId = this.sessionInfo[id].ID;
     dialogRef.afterClosed().subscribe((userCollect) => {
-      console.log(userCollect);
+      if (userCollect === true) {
+        combineLatest([this.accessToken$, this.userInfo$])
+          .pipe(
+            switchMap(([accessToken, userInfo]) => {
+              return this.sessionInfoService.deleteSession$(
+                accessToken,
+                userInfo.ID,
+                sessionId,
+              );
+            }),
+          )
+          .subscribe({
+            next: (value) => {
+              // console.log(value);
+              // TODO: new toast for success
+            },
+            error: (err) => {
+              // console.error(err);
+              // TODO: new toast for error
+            },
+          });
+      }
     });
   }
 

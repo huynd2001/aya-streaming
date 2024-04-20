@@ -24,10 +24,9 @@ export class SessionInfoService {
       .pipe(
         catchError(
           (err: any): Observable<{ data?: SessionInfo[]; err?: string }> => {
-            console.error(err);
             return of({
               data: undefined,
-              err: String(err),
+              err: JSON.stringify(err),
             });
           },
         ),
@@ -62,13 +61,28 @@ export class SessionInfoService {
       sessionInfoUrl,
       {
         user_id: userId,
-        is_on: true,
+        is_on: false,
         id: sessionDialogInfo.id,
         resources: JSON.stringify(sessionDialogInfo.resources),
       },
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+  }
+
+  deleteSession$(accessToken: string, userId: number, sessionId: number) {
+    return this.http.delete<{ data?: SessionInfo; err?: string }>(
+      sessionInfoUrl,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          user_id: userId,
+          id: sessionId,
         },
       },
     );
