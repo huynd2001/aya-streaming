@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"net/http"
 	"slices"
+	"strings"
 )
 
 type SessionFilter struct {
@@ -51,7 +52,7 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 
-			if req.Method == "OPTIONS" {
+			if req.Method == http.MethodOptions {
 				next.ServeHTTP(writer, req)
 				return
 			}
@@ -160,7 +161,7 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodOptions).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			writer.Header().Set("Allow", "OPTIONS, GET, POST, PUT, DELETE")
+			writer.Header().Set("Allow", strings.Join([]string{http.MethodOptions, http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}, ", "))
 			writer.WriteHeader(http.StatusNoContent)
 		})
 

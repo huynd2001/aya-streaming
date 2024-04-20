@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"net/http"
 	"slices"
+	"strings"
 )
 
 type UserFilter struct {
@@ -81,7 +82,7 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 	r.PathPrefix("/").
 		Methods(http.MethodOptions).
 		HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-			writer.Header().Set("Allow", "OPTIONS, GET, POST")
+			writer.Header().Set("Allow", strings.Join([]string{http.MethodOptions, http.MethodGet, http.MethodPost}, ", "))
 			writer.WriteHeader(http.StatusNoContent)
 		})
 
