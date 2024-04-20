@@ -8,10 +8,9 @@ describe('SessionInfoDisplayComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SessionInfoDisplayComponent]
-    })
-    .compileComponents();
-    
+      imports: [SessionInfoDisplayComponent],
+    }).compileComponents();
+
     fixture = TestBed.createComponent(SessionInfoDisplayComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
