@@ -85,7 +85,9 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 			}
 
 			user := models.GORMUser{
-				ID: sessionQuery.UserID,
+				Model: gorm.Model{
+					ID: sessionQuery.UserID,
+				},
 			}
 
 			userQueryResult := db.First(&user)
@@ -111,7 +113,9 @@ func authSessionOwnerMiddleware(db *gorm.DB) mux.MiddlewareFunc {
 				// get the Session content
 
 				session := models.GORMSession{
-					ID: sessionQuery.ID,
+					Model: gorm.Model{
+						ID: sessionQuery.ID,
+					},
 				}
 
 				sessionQueryResult := db.

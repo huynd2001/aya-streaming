@@ -6,7 +6,6 @@ import (
 
 type GORMSession struct {
 	gorm.Model
-	ID        uint
 	Resources string
 	IsOn      bool
 	UserID    uint
