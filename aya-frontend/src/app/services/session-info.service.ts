@@ -56,12 +56,13 @@ export class SessionInfoService {
     accessToken: string,
     userId: number,
     sessionDialogInfo: SessionDialogInfo,
+    isOn?: boolean,
   ) {
     return this.http.put<{ data?: SessionInfo; err?: string }>(
       sessionInfoUrl,
       {
         user_id: userId,
-        is_on: false,
+        is_on: isOn === undefined ? false : isOn,
         id: sessionDialogInfo.id,
         resources: JSON.stringify(sessionDialogInfo.resources),
       },

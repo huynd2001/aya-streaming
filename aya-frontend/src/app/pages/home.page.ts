@@ -21,7 +21,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
 import { SessionInfoService } from '../services/session-info.service';
-import { SessionInfo } from '../interfaces/session';
+import { SessionDialogInfo, SessionInfo } from '../interfaces/session';
 import {
   MatCard,
   MatCardActions,
@@ -32,6 +32,10 @@ import { MatDivider } from '@angular/material/divider';
 import { YesNoDialogComponent } from '../components/yes-no-dialog/yes-no-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SessionInfoDisplayComponent } from '../components/session-info-display/session-info-display.component';
+import {
+  MatSlideToggle,
+  MatSlideToggleChange,
+} from '@angular/material/slide-toggle';
 
 @Component({
   selector: 'app-home',
@@ -52,6 +56,7 @@ import { SessionInfoDisplayComponent } from '../components/session-info-display/
     MatCardActions,
     MatDivider,
     SessionInfoDisplayComponent,
+    MatSlideToggle,
   ],
   templateUrl: 'home.page.html',
   styleUrl: 'home.page.css',
@@ -229,16 +234,31 @@ export default class HomePage implements OnInit, OnDestroy {
         combineLatest([this.accessToken$, this.userInfo$])
           .pipe(
             switchMap(([accessToken, userInfo]) => {
+              this._snackBar.open('Submitting...', 'Dismiss');
               return this.sessionInfoService.newSession$(
                 accessToken,
                 userInfo.ID,
                 sessionInfoDialog,
               );
             }),
+            map((data) => {
+              if (data.err) {
+                throw data.err;
+              } else {
+                return data.data;
+              }
+            }),
           )
           .subscribe({
             next: (value) => {
-              console.log(value);
+              const sessionId = value?.ID;
+              this._snackBar.open(
+                `Create Session ${sessionId} Success!`,
+                'Dismiss',
+                {
+                  duration: 3000,
+                },
+              );
             },
             error: (err) => {
               console.error(err);
@@ -316,6 +336,7 @@ export default class HomePage implements OnInit, OnDestroy {
         combineLatest([this.accessToken$, this.userInfo$])
           .pipe(
             switchMap(([accessToken, userInfo]) => {
+              this._snackBar.open('Loading...', 'Dismiss');
               return this.sessionInfoService.deleteSession$(
                 accessToken,
                 userInfo.ID,
@@ -346,6 +367,53 @@ export default class HomePage implements OnInit, OnDestroy {
           });
       }
     });
+  }
+
+  switchSession(id: number, event: MatSlideToggleChange) {
+    if (!this.sessionInfo) {
+      return;
+    }
+    if (id < 0 || id >= this.sessionInfo.length) {
+      return;
+    }
+    const sessionId = this.sessionInfo[id].ID;
+    const newSessionInfo: SessionDialogInfo = {
+      id: this.sessionInfo[id].ID,
+      resources: JSON.parse(this.sessionInfo[id].Resources),
+    };
+    combineLatest([this.accessToken$, this.userInfo$])
+      .pipe(
+        switchMap(([accessToken, userInfo]) => {
+          this._snackBar.open('Loading...', 'Dismiss');
+          return this.sessionInfoService.updateSession$(
+            accessToken,
+            userInfo.ID,
+            newSessionInfo,
+            event.checked,
+          );
+        }),
+      )
+      .subscribe({
+        next: (value) => {
+          this._snackBar.open(
+            `Update Session ${sessionId} Success!`,
+            'Dismiss',
+            {
+              duration: 3000,
+            },
+          );
+        },
+        error: (err) => {
+          console.error(err);
+          this._snackBar.open(
+            `Update Session ${sessionId} Failed!`,
+            'Dismiss',
+            {
+              duration: 3000,
+            },
+          );
+        },
+      });
   }
 
   protected readonly open = open;

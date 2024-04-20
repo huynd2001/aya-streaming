@@ -61,6 +61,10 @@
     >
       <mat-icon class="icon-inside-button">delete</mat-icon>
     </button>
+    <mat-slide-toggle
+      [checked]="session.IsOn"
+      (change)="switchSession($index, $event)"
+    ></mat-slide-toggle>
   </mat-card-actions>
 </mat-card>
 <mat-divider></mat-divider>
