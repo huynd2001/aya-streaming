@@ -52,4 +52,25 @@ export class SessionInfoService {
       },
     );
   }
+
+  updateSession$(
+    accessToken: string,
+    userId: number,
+    sessionDialogInfo: SessionDialogInfo,
+  ) {
+    return this.http.put<{ data?: SessionInfo; err?: string }>(
+      sessionInfoUrl,
+      {
+        user_id: userId,
+        is_on: true,
+        id: sessionDialogInfo.id,
+        resources: JSON.stringify(sessionDialogInfo.resources),
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+  }
 }

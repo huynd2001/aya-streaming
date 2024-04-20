@@ -261,7 +261,31 @@ export default class HomePage implements OnInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe((sessionInfoDialog) => {});
+    dialogRef.afterClosed().subscribe((sessionInfoDialog) => {
+      console.log(sessionInfoDialog);
+      if (sessionInfoDialog) {
+        combineLatest([this.accessToken$, this.userInfo$])
+          .pipe(
+            switchMap(([accessToken, userInfo]) => {
+              return this.sessionInfoService.updateSession$(
+                accessToken,
+                userInfo.ID,
+                sessionInfoDialog,
+              );
+            }),
+          )
+          .subscribe({
+            next: (value) => {
+              // console.log(value);
+              // TODO: new toast for success
+            },
+            error: (err) => {
+              // console.error(err);
+              // TODO: new toast for error
+            },
+          });
+      }
+    });
   }
 
   openDeleteDialog(id: number) {
@@ -273,7 +297,9 @@ export default class HomePage implements OnInit, OnDestroy {
     }
     const dialogRef = this.dialog.open(YesNoDialogComponent);
 
-    dialogRef.afterClosed().subscribe((userCollect) => {});
+    dialogRef.afterClosed().subscribe((userCollect) => {
+      console.log(userCollect);
+    });
   }
 
   protected readonly open = open;
