@@ -50,7 +50,6 @@ export class SessionInfoDisplayComponent implements OnInit {
           },
         };
       });
-      console.log(this.resources);
       return;
     } else {
       this.resources = [];

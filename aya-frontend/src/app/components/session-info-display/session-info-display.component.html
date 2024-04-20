@@ -1,4 +1,4 @@
-<mat-accordion>
+<mat-accordion multi>
   @for (resource of resources; track $index) {
     <mat-expansion-panel expanded>
       @switch (resource.resourceType) {
