@@ -1,6 +1,7 @@
 package main
 
 import (
+	models "aya-backend/db-models"
 	"aya-backend/server/api"
 	"aya-backend/server/hubs"
 	"aya-backend/server/service/composed"
@@ -131,7 +132,10 @@ func main() {
 			select {
 			case msg := <-msgChanEmitter.UpdateEmitter():
 				fmt.Printf("%#v\n", msg)
-				sessionIds := msgHub.GetSessionId(msg.ExtraFields)
+				sessionIds := msgHub.GetSessionId(models.Resource{
+					ResourceType: msg.Message.Source,
+					ResourceInfo: msg.ExtraFields,
+				})
 				wsServer.SendMessageToSessions(sessionIds, msg)
 			case <-sc:
 				fmt.Println("End Server!")

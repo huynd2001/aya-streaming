@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { SessionDialogInfo, SessionInfo } from '../interfaces/session';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
 
 const sessionInfoUrl = `/api/session/`;
 
@@ -58,20 +58,28 @@ export class SessionInfoService {
     sessionDialogInfo: SessionDialogInfo,
     isOn?: boolean,
   ) {
-    return this.http.put<{ data?: SessionInfo; err?: string }>(
-      sessionInfoUrl,
-      {
-        user_id: userId,
-        is_on: isOn === undefined ? false : isOn,
-        id: sessionDialogInfo.id,
-        resources: JSON.stringify(sessionDialogInfo.resources),
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+    return this.http
+      .put<{ data?: SessionInfo; err?: string }>(
+        sessionInfoUrl,
+        {
+          user_id: userId,
+          is_on: isOn === undefined ? false : isOn,
+          id: sessionDialogInfo.id,
+          resources: JSON.stringify(sessionDialogInfo.resources),
         },
-      },
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      )
+      .pipe(
+        map((result) => {
+          if (result.err) {
+            throw result.err;
+          }
+        }),
+      );
   }
 
   deleteSession$(accessToken: string, userId: number, sessionId: number) {

@@ -10,6 +10,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	yt "google.golang.org/api/youtube/v3"
+	"sync"
 )
 
 type YoutubeEmitterConfig struct {
@@ -26,28 +27,50 @@ type YoutubeEmitterConfig struct {
 type YoutubeEmitter struct {
 	service.ChatEmitter
 	service.ResourceRegister
-	updateEmitter chan service.MessageUpdate
-	errorEmitter  chan error
-	register      *youtubeRegister
+
+	mutex sync.Mutex
+
+	updateEmitter       chan service.MessageUpdate
+	errorEmitter        chan error
+	register            *youtubeRegister
+	resource2Subscriber map[string]map[string]bool
 }
 
-func (emitter *YoutubeEmitter) Register(resourceInfo any) {
+func (emitter *YoutubeEmitter) Register(subscriber string, resourceInfo any) {
 	ytInfo, ok := resourceInfo.(*YoutubeInfo)
 	if !ok {
 		return
 	}
+	emitter.mutex.Lock()
+	defer emitter.mutex.Unlock()
 	channelId := ytInfo.YoutubeChannelId
-	emitter.register.registerChannel(channelId, emitter.updateEmitter)
+	if emitter.resource2Subscriber[channelId] == nil {
+		emitter.resource2Subscriber[channelId] = make(map[string]bool)
+		emitter.resource2Subscriber[channelId][subscriber] = true
+		emitter.register.registerChannel(channelId, emitter.updateEmitter)
+	} else {
+		emitter.resource2Subscriber[channelId][subscriber] = true
+	}
 }
 
-func (emitter *YoutubeEmitter) Deregister(resourceInfo any) {
+func (emitter *YoutubeEmitter) Deregister(subscriber string, resourceInfo any) {
 
 	ytInfo, ok := resourceInfo.(*YoutubeInfo)
 	if !ok {
 		return
 	}
+	emitter.mutex.Lock()
+	defer emitter.mutex.Unlock()
 	channelId := ytInfo.YoutubeChannelId
-	emitter.register.deregisterChannel(channelId)
+	if emitter.resource2Subscriber[channelId] == nil {
+		// ignore since there is no resource to deregister
+		return
+	}
+	delete(emitter.resource2Subscriber[channelId], subscriber)
+	if len(emitter.resource2Subscriber[channelId]) == 0 {
+		delete(emitter.resource2Subscriber, channelId)
+		emitter.register.deregisterChannel(channelId)
+	}
 
 }
 
@@ -138,9 +161,10 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 	errorCh := make(chan error)
 
 	youtubeEmitter := YoutubeEmitter{
-		updateEmitter: messageUpdates,
-		errorEmitter:  errorCh,
-		register:      newYoutubeRegister(nil),
+		updateEmitter:       messageUpdates,
+		errorEmitter:        errorCh,
+		register:            newYoutubeRegister(nil),
+		resource2Subscriber: make(map[string]map[string]bool),
 	}
 
 	go func() {

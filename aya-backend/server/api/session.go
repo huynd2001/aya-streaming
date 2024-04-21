@@ -307,8 +307,6 @@ func (dbApiServer *DBApiServer) NewSessionApi(r *mux.Router) {
 				return
 			}
 
-			fmt.Printf("%#v\n", resourceInfos)
-
 			err = validateResource(resourceInfos)
 			if err != nil {
 				writer.Header().Set("Content-Type", "application/json")

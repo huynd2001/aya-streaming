@@ -7,13 +7,14 @@ import (
 	"aya-backend/server/service/composed"
 	discordsource "aya-backend/server/service/discord"
 	youtubesource "aya-backend/server/service/youtube"
+	"fmt"
 	"gorm.io/gorm"
 	"sync"
 	"time"
 )
 
 const (
-	DATA_RETRIEVAL_INTERVAL = 1 * time.Minute
+	DATA_RETRIEVAL_INTERVAL = 10 * time.Second
 )
 
 type MessageHub struct {
@@ -32,10 +33,11 @@ type MessageHub struct {
 func NewMessageHub(emitter *composed.MessageEmitter, gormDB *gorm.DB) *MessageHub {
 
 	msgHub := MessageHub{
-		discordHub: NewDiscordResourceHub(emitter.GetDiscordEmitter()),
-		youtubeHub: NewYoutubeResourceHub(emitter.GetYoutubeEmitter()),
-		infoDB:     db.NewInfoDB(gormDB),
-		stopSignal: make(chan bool),
+		discordHub:         NewDiscordResourceHub(emitter.GetDiscordEmitter()),
+		youtubeHub:         NewYoutubeResourceHub(emitter.GetYoutubeEmitter()),
+		infoDB:             db.NewInfoDB(gormDB),
+		stopSignal:         make(chan bool),
+		registeredSessions: make(map[string]bool),
 	}
 
 	go func() {
@@ -43,9 +45,12 @@ func NewMessageHub(emitter *composed.MessageEmitter, gormDB *gorm.DB) *MessageHu
 		for {
 			select {
 			case <-time.After(DATA_RETRIEVAL_INTERVAL):
+				fmt.Printf("Data retrieval start\n")
 				newTime := time.Now()
 				resourceInfoMap := msgHub.infoDB.GetResourcesInfo(msgHub.registeredSessions, lastUpdateTime)
 				for sessionId, resources := range resourceInfoMap {
+					fmt.Printf("Update session with Id %s\n", sessionId)
+					fmt.Printf("New resources info: %s\n", resources)
 					msgHub.RegisterSessionResources(sessionId, resources)
 				}
 				lastUpdateTime = newTime
@@ -104,6 +109,7 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 	}
 	m.discordHub.RegisterSessionResources(sessionId, discordResources)
 	m.youtubeHub.RegisterSessionResources(sessionId, youtubeResources)
+	m.registeredSessions[sessionId] = true
 
 }
 

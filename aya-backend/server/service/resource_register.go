@@ -1,6 +1,6 @@
 package service
 
 type ResourceRegister interface {
-	Register(resourceInfo any)
-	Deregister(resourceInfo any)
+	Register(subscriber string, resourceInfo any)
+	Deregister(subscriber string, resourceInfo any)
 }

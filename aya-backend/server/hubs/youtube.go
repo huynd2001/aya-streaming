@@ -96,11 +96,11 @@ func (hub *YoutubeResourceHub) RegisterSessionResources(sessionId string, resour
 	}
 	removeRs, addRs := diffYoutube(oldResources, newResources)
 	for _, removeR := range removeRs {
-		hub.emitter.Deregister(removeR)
+		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
 	for _, addR := range addRs {
-		hub.emitter.Register(addR)
+		hub.emitter.Register(sessionId, addR)
 		hub.registerSession(sessionId, addR)
 	}
 }

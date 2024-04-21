@@ -1,7 +1,6 @@
 package composed
 
 import (
-	models "aya-backend/db-models"
 	"aya-backend/server/service"
 	discordsource "aya-backend/server/service/discord"
 	"aya-backend/server/service/test_source"
@@ -36,67 +35,6 @@ func (messageEmitter *MessageEmitter) GetDiscordEmitter() *discordsource.Discord
 
 func (messageEmitter *MessageEmitter) GetYoutubeEmitter() *youtubesource.YoutubeEmitter {
 	return messageEmitter.youtubeEmitter
-}
-
-func (messageEmitter *MessageEmitter) Register(resourceInfo any) {
-	// resourceInfo should be of type []Resource
-	resources, ok := resourceInfo.([]models.Resource)
-	if !ok {
-		// do thing since the resource is not of correct type
-		fmt.Printf("Cannot register %#v\n", resourceInfo)
-		return
-	}
-	for _, resource := range resources {
-		switch resource.ResourceType {
-		case service.Discord:
-			discordInfo, ok := resource.ResourceInfo.(discordsource.DiscordInfo)
-			if !ok {
-				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
-			} else {
-				messageEmitter.discordEmitter.Register(discordInfo)
-			}
-		case service.Youtube:
-			youtubeInfo, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
-			if !ok {
-				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
-			} else {
-				messageEmitter.youtubeEmitter.Register(youtubeInfo)
-			}
-		default:
-			fmt.Printf("Not supporting %s, cannot register %#v\n", resource.ResourceType.String(), resource.ResourceInfo)
-		}
-	}
-}
-
-func (messageEmitter *MessageEmitter) Deregister(resourceInfo any) {
-	// resourceInfo should be of type []Resource
-	resources, ok := resourceInfo.([]models.Resource)
-	if !ok {
-		// do thing since the resource is not of correct type
-		fmt.Printf("Cannot deregister %#v\n", resourceInfo)
-		return
-	}
-	for _, resource := range resources {
-		switch resource.ResourceType {
-		case service.Discord:
-			discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
-			if !ok {
-				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
-			} else {
-				messageEmitter.discordEmitter.Deregister(discordInfo)
-			}
-		case service.Youtube:
-			youtubeInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
-			if !ok {
-				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
-			} else {
-				messageEmitter.youtubeEmitter.Deregister(youtubeInfo)
-			}
-		default:
-			fmt.Printf("Not supporting %s, cannot deregister %#v\n", resource.ResourceType.String(), resource.ResourceInfo)
-
-		}
-	}
 }
 
 type MessageChannelConfig struct {

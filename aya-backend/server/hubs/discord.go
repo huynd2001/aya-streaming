@@ -2,6 +2,7 @@ package hubs
 
 import (
 	discordsource "aya-backend/server/service/discord"
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -32,7 +33,7 @@ func (hub *DiscordResourceHub) GetSessionId(resourceInfo any) []string {
 	guildId := discordInfo.DiscordGuildId
 	channelId := discordInfo.DiscordChannelId
 	guildChannel := strings.Join([]string{guildId, channelId}, "/")
-	if hub.guildChannel2Session[guildId] == nil {
+	if hub.guildChannel2Session[guildChannel] == nil {
 		return []string{}
 	}
 	sessions := make([]string, len(hub.guildChannel2Session[guildChannel]))
@@ -115,11 +116,13 @@ func (hub *DiscordResourceHub) RegisterSessionResources(sessionId string, resour
 	}
 	removeRs, addRs := diffDiscord(oldResources, newResources)
 	for _, removeR := range removeRs {
-		hub.emitter.Deregister(removeR)
+		fmt.Printf("Discord: deregistering %#v from session %s\n", removeR, sessionId)
+		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
 	for _, addR := range addRs {
-		hub.emitter.Register(addR)
+		fmt.Printf("Discord: registering %s from session %s\n", addR, sessionId)
+		hub.emitter.Register(sessionId, addR)
 		hub.registerSession(sessionId, addR)
 	}
 }

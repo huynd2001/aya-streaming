@@ -27,7 +27,7 @@ type Resource struct {
 func (r *Resource) UnmarshalJSON(data []byte) error {
 	var resource struct {
 		ResourceType    service.Source `json:"resourceType"`
-		ResourceInfoStr string         `json:"resourceInfo"`
+		ResourceInfoAny any            `json:"resourceInfo"`
 	}
 	var err error
 	if err = json.Unmarshal(data, &resource); err != nil {
@@ -35,11 +35,15 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 	}
 
 	r.ResourceType = resource.ResourceType
+	resourceInfoStr, err := json.Marshal(resource.ResourceInfoAny)
+	if err != nil {
+		return err
+	}
 
 	switch r.ResourceType {
 	case service.Discord:
 		var discordInfo discordsource.DiscordInfo
-		err := json.Unmarshal([]byte(resource.ResourceInfoStr), &discordInfo)
+		err := json.Unmarshal(resourceInfoStr, &discordInfo)
 		if err != nil {
 			return fmt.Errorf("resource of type 'discord', but cannot parse the info: %s", err.Error())
 		} else {
@@ -48,7 +52,7 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 		}
 	case service.Youtube:
 		var youtubeInfo youtubesource.YoutubeInfo
-		err := json.Unmarshal([]byte(resource.ResourceInfoStr), &youtubeInfo)
+		err := json.Unmarshal(resourceInfoStr, &youtubeInfo)
 		if err != nil {
 			return fmt.Errorf("resource of type 'youtube', but cannot parse the info: %s", err.Error())
 		} else {
