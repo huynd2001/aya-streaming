@@ -2,6 +2,9 @@ package main
 
 import (
 	"aya-backend/server/api"
+	"aya-backend/server/db"
+	"aya-backend/server/hubs"
+	"aya-backend/server/service"
 	"aya-backend/server/socket"
 	"errors"
 	"fmt"
@@ -55,9 +58,9 @@ func getDB() (*gorm.DB, error) {
 
 }
 
-func parseEmitterConfig(msgSettingStr string) *MessageChannelConfig {
+func parseEmitterConfig(msgSettingStr string) *service.MessageChannelConfig {
 
-	config := MessageChannelConfig{
+	config := service.MessageChannelConfig{
 		Test:    false,
 		Discord: false,
 		Youtube: false,
@@ -91,32 +94,36 @@ func main() {
 	fmt.Println("Hello, world!")
 	r := mux.NewRouter()
 
+	gormDB, err := getDB()
+	if err != nil {
+		fmt.Printf("Error during accessing the db: %s\n", err.Error())
+		return
+	}
+
 	enabledSourceStr := os.Getenv(SOURCES_ENV)
 	msgChanConfig := parseEmitterConfig(enabledSourceStr)
 
 	msgChanConfig.BaseURL = os.Getenv(REDIRECT_URL_ENV)
 	msgChanConfig.Router = r
 
-	msgChanEmitter := NewMessageChannel(msgChanConfig)
-	msgHub := NewMessageHub()
+	msgChanEmitter := service.NewMessageEmitter(msgChanConfig)
+	msgHub := hubs.NewMessageHub()
+	infoDB := db.NewInfoDB(gormDB)
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	streamRouter := r.PathPrefix("/stream").Subrouter()
 
-	wsServer, err := socket.NewWSServer(streamRouter)
+	wsServer, err := socket.NewWSServer(streamRouter, msgHub, msgChanEmitter, infoDB)
 	if err != nil {
 		fmt.Printf("Error during create the websocket server: %s\n", err.Error())
+		return
 	}
 
 	apiRouter := r.PathPrefix("/api").Subrouter()
-	db, err := getDB()
-	if err != nil {
-		fmt.Printf("Error during accessing the db: %s\n", err.Error())
-	}
 
-	api.NewApiServer(db, apiRouter)
+	api.NewApiServer(gormDB, apiRouter)
 
 	http.Handle("/", r)
 	fmt.Println("Server's up and running!")

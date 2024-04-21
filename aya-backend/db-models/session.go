@@ -60,7 +60,7 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 	}
 }
 
-func (session *GORMSession) BeforeCreate(tx *gorm.DB) (err error) {
+func (session *GORMSession) BeforeCreate(db *gorm.DB) (err error) {
 	session.UUID = uuid.New()
 	return
 }

@@ -1,12 +1,13 @@
 package socket
 
 import (
+	"aya-backend/server/db"
+	"aya-backend/server/hubs"
 	. "aya-backend/server/service"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	ws "github.com/gorilla/websocket"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,9 +30,28 @@ type WSConnectionMap struct {
 }
 
 type WSServer struct {
-	mutex   sync.RWMutex
-	upg     *ws.Upgrader
+	mutex sync.RWMutex
+	upg   *ws.Upgrader
+
+	msgHub           *hubs.MessageHub
+	resourceRegister *MessageEmitter
+	infoDB           *db.InfoDB
+
 	ChanMap map[string]*WSConnectionMap
+}
+
+func (server *WSServer) registerSessionForMessages(sessionId string) {
+	resources := server.infoDB.GetResourcesOfSession(sessionId)
+	for _, resource := range resources {
+		(*server.msgHub).AddSession(sessionId, resource)
+	}
+	(*server.resourceRegister).Register(resources)
+}
+
+func (server *WSServer) deregisterSessionForMessages(sessionId string) {
+	resources := server.infoDB.GetResourcesOfSession(sessionId)
+	(*server.msgHub).RemoveSession(sessionId)
+	(*server.resourceRegister).Deregister(resources)
 }
 
 func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
@@ -45,7 +65,7 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	c, err := wsServer.upg.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		fmt.Printf("upgrade: %s\n", err.Error())
 		return
 	}
 
@@ -62,6 +82,7 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 	wsConnectionId := wsServer.ChanMap[id].CountId
 
 	wsServer.ChanMap[id].MessageConnChan[wsConnectionId] = msgChannel
+	wsServer.registerSessionForMessages(id)
 	wsServer.mutex.Unlock()
 
 	defer func(c *ws.Conn) {
@@ -72,20 +93,25 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	c.SetCloseHandler(func(code int, text string) error {
 		fmt.Println("close websocket")
-		err := defaultCloseHandler(code, text)
+		wsServer.mutex.Lock()
 		if wsServer.ChanMap[id] != nil {
-			delete(wsServer.ChanMap, id)
+			delete(wsServer.ChanMap[id].MessageConnChan, wsConnectionId)
+			if len(wsServer.ChanMap[id].MessageConnChan) == 0 {
+				wsServer.deregisterSessionForMessages(id)
+			}
 		}
+		wsServer.mutex.Unlock()
+		err := defaultCloseHandler(code, text)
 		return err
 	})
 
-	fmt.Println("Connection found!")
+	fmt.Printf("Session %s is connected\n", id)
 
 	for {
 		newMessage := <-msgChannel
 		newMessageStr, err := json.Marshal(newMessage)
 		if err != nil {
-			fmt.Printf("Error found while marshal msg: %s\n", err.Error())
+			fmt.Printf("Error found while marshal msg:\n%s\n", err.Error())
 			continue
 		}
 
@@ -119,7 +145,12 @@ func equalASCIIFold(s, t string) bool {
 	return s == t
 }
 
-func NewWSServer(s *mux.Router) (*WSServer, error) {
+func NewWSServer(
+	s *mux.Router,
+	msgHub *hubs.MessageHub,
+	resourceRegister *MessageEmitter,
+	infoDB *db.InfoDB,
+) (*WSServer, error) {
 
 	websiteOrigin := os.Getenv(WEBSITE_HOST_ORIGIN_ENV)
 	if websiteOrigin != "" {
@@ -128,7 +159,6 @@ func NewWSServer(s *mux.Router) (*WSServer, error) {
 
 	upg := ws.Upgrader{}
 
-	// Check origin
 	upg.CheckOrigin = func(r *http.Request) bool {
 		origin := r.Header["Origin"]
 
@@ -150,8 +180,11 @@ func NewWSServer(s *mux.Router) (*WSServer, error) {
 	}
 
 	wsServer := WSServer{
-		upg:     &upg,
-		ChanMap: make(map[string]*WSConnectionMap),
+		upg:              &upg,
+		msgHub:           msgHub,
+		infoDB:           infoDB,
+		resourceRegister: resourceRegister,
+		ChanMap:          make(map[string]*WSConnectionMap),
 	}
 
 	s.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -163,22 +196,22 @@ func NewWSServer(s *mux.Router) (*WSServer, error) {
 	return &wsServer, nil
 }
 
-func (wsServer *WSServer) SendMessageToSession(sessionId string, msg MessageUpdate) {
-	wsServer.mutex.RLock()
-	defer wsServer.mutex.RUnlock()
+func (server *WSServer) SendMessageToSession(sessionId string, msg MessageUpdate) {
+	server.mutex.RLock()
+	defer server.mutex.RUnlock()
 
-	if wsServer.ChanMap[sessionId] == nil {
+	if server.ChanMap[sessionId] == nil {
 		fmt.Printf("Do nothing since the session \"%s\" does not exist\n", sessionId)
 		return
 	}
 
-	for _, conn := range wsServer.ChanMap[sessionId].MessageConnChan {
+	for _, conn := range server.ChanMap[sessionId].MessageConnChan {
 		conn <- msg
 	}
 }
 
-func (wsServer *WSServer) SendMessageToSessions(sessionIds []string, msg MessageUpdate) {
+func (server *WSServer) SendMessageToSessions(sessionIds []string, msg MessageUpdate) {
 	for _, session := range sessionIds {
-		wsServer.SendMessageToSession(session, msg)
+		server.SendMessageToSession(session, msg)
 	}
 }

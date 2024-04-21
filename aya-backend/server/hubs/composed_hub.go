@@ -1,38 +1,33 @@
-package main
+package hubs
 
 import (
-	"aya-backend/server/hubs"
+	models "aya-backend/db-models"
 	"aya-backend/server/service"
 )
 
 type MessageHub struct {
-	hubs.SessionResourceHub
-	discordHub *hubs.DiscordResourceHub
-	youtubeHub *hubs.YoutubeResourceHub
-}
-
-type HubResourceInfo struct {
-	ResourceType service.Source
-	SpecificInfo any
+	SessionResourceHub
+	discordHub *DiscordResourceHub
+	youtubeHub *YoutubeResourceHub
 }
 
 func NewMessageHub() *MessageHub {
 	return &MessageHub{
-		discordHub: hubs.NewDiscordResourceHub(),
-		youtubeHub: hubs.NewYoutubeResourceHub(),
+		discordHub: NewDiscordResourceHub(),
+		youtubeHub: NewYoutubeResourceHub(),
 	}
 }
 
 func (m *MessageHub) GetSessionId(resourceInfo any) []string {
-	hubResourceInfo, ok := resourceInfo.(HubResourceInfo)
+	hubResourceInfo, ok := resourceInfo.(models.Resource)
 	if !ok {
 		return []string{}
 	}
 	switch hubResourceInfo.ResourceType {
 	case service.Discord:
-		return m.discordHub.GetSessionId(hubResourceInfo.SpecificInfo)
+		return m.discordHub.GetSessionId(hubResourceInfo.ResourceInfo)
 	case service.Youtube:
-		return m.youtubeHub.GetSessionId(hubResourceInfo.SpecificInfo)
+		return m.youtubeHub.GetSessionId(hubResourceInfo.ResourceInfo)
 	default:
 		return []string{}
 	}
@@ -44,15 +39,15 @@ func (m *MessageHub) RemoveSession(sessionId string) {
 }
 
 func (m *MessageHub) AddSession(sessionId string, resourceInfo any) {
-	hubResourceInfo, ok := resourceInfo.(HubResourceInfo)
+	hubResourceInfo, ok := resourceInfo.(models.Resource)
 	if !ok {
 		return
 	}
 	switch hubResourceInfo.ResourceType {
 	case service.Discord:
-		m.discordHub.AddSession(sessionId, hubResourceInfo.SpecificInfo)
+		m.discordHub.AddSession(sessionId, hubResourceInfo.ResourceInfo)
 	case service.Youtube:
-		m.youtubeHub.AddSession(sessionId, hubResourceInfo.SpecificInfo)
+		m.youtubeHub.AddSession(sessionId, hubResourceInfo.ResourceInfo)
 	default:
 		return
 	}

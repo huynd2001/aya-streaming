@@ -1,8 +1,7 @@
-package main
+package service
 
 import (
 	models "aya-backend/db-models"
-	"aya-backend/server/service"
 	discordsource "aya-backend/server/service/discord"
 	"aya-backend/server/service/test_source"
 	youtubesource "aya-backend/server/service/youtube"
@@ -21,16 +20,16 @@ const (
 	DISCORD_TOKEN_ENV = "DISCORD_TOKEN"
 )
 
-type MessagesChannel struct {
-	service.ChatEmitter
+type MessageEmitter struct {
+	ChatEmitter
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
 
-	updateEmitter chan service.MessageUpdate
+	updateEmitter chan MessageUpdate
 }
 
-func (messageChannel MessagesChannel) Register(resourceInfo any) {
+func (messageChannel MessageEmitter) Register(resourceInfo any) {
 	// resourceInfo should be of type []Resource
 	resources, ok := resourceInfo.([]models.Resource)
 	if !ok {
@@ -40,14 +39,14 @@ func (messageChannel MessagesChannel) Register(resourceInfo any) {
 	}
 	for _, resource := range resources {
 		switch resource.ResourceType {
-		case service.Discord:
+		case Discord:
 			discordInfo, ok := resource.ResourceInfo.(discordsource.DiscordInfo)
 			if !ok {
 				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
 			} else {
 				messageChannel.discordEmitter.Register(discordInfo)
 			}
-		case service.Youtube:
+		case Youtube:
 			youtubeInfo, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
 			if !ok {
 				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
@@ -60,7 +59,7 @@ func (messageChannel MessagesChannel) Register(resourceInfo any) {
 	}
 }
 
-func (messageChannel MessagesChannel) Deregister(resourceInfo any) {
+func (messageChannel MessageEmitter) Deregister(resourceInfo any) {
 	// resourceInfo should be of type []Resource
 	resources, ok := resourceInfo.([]models.Resource)
 	if !ok {
@@ -70,14 +69,14 @@ func (messageChannel MessagesChannel) Deregister(resourceInfo any) {
 	}
 	for _, resource := range resources {
 		switch resource.ResourceType {
-		case service.Discord:
+		case Discord:
 			discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
 			if !ok {
 				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
 			} else {
 				messageChannel.discordEmitter.Deregister(discordInfo)
 			}
-		case service.Youtube:
+		case Youtube:
 			youtubeInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
 			if !ok {
 				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
@@ -99,11 +98,11 @@ type MessageChannelConfig struct {
 	Router  *mux.Router
 }
 
-func (messageChannel MessagesChannel) UpdateEmitter() chan service.MessageUpdate {
+func (messageChannel MessageEmitter) UpdateEmitter() chan MessageUpdate {
 	return messageChannel.updateEmitter
 }
 
-func (messageChannel MessagesChannel) CloseEmitter() error {
+func (messageChannel MessageEmitter) CloseEmitter() error {
 
 	close(messageChannel.updateEmitter)
 
@@ -132,9 +131,9 @@ func (messageChannel MessagesChannel) CloseEmitter() error {
 	}
 }
 
-func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChannel {
+func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitter {
 
-	messageChannel := MessagesChannel{
+	messageChannel := MessageEmitter{
 		testEmitter:    nil,
 		discordEmitter: nil,
 		youtubeEmitter: nil,
@@ -184,7 +183,7 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 		}
 	}
 
-	msgC := make(chan service.MessageUpdate)
+	msgC := make(chan MessageUpdate)
 
 	if messageChannel.testEmitter != nil {
 		go func() {
@@ -198,19 +197,6 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 
 	if messageChannel.discordEmitter != nil {
 		go func() {
-			// TODO: get from db server
-			guildID1 := os.Getenv("TEST_GUILD_ID_1")
-			guildID2 := os.Getenv("TEST_GUILD_ID_2")
-			channelID1 := os.Getenv("TEST_CHANNEL_ID_1")
-			channelID2 := os.Getenv("TEST_CHANNEL_ID_2")
-			messageChannel.discordEmitter.Register(discordsource.DiscordInfo{
-				DiscordGuildId:   guildID1,
-				DiscordChannelId: channelID1,
-			})
-			messageChannel.discordEmitter.Register(discordsource.DiscordInfo{
-				DiscordGuildId:   guildID2,
-				DiscordChannelId: channelID2,
-			})
 			for {
 				discordMsg := <-messageChannel.discordEmitter.UpdateEmitter()
 				fmt.Println("Message from discord!")
@@ -221,15 +207,6 @@ func NewMessageChannel(messageChannelConfig *MessageChannelConfig) *MessagesChan
 
 	if messageChannel.youtubeEmitter != nil {
 		go func() {
-			// TODO: get from db server
-			ytChannelID1 := os.Getenv("TEST_YT_CHANNEL_ID_1")
-			ytChannelID2 := os.Getenv("TEST_YT_CHANNEL_ID_2")
-			messageChannel.youtubeEmitter.Register(youtubesource.YoutubeInfo{
-				YoutubeChannelId: ytChannelID1,
-			})
-			messageChannel.youtubeEmitter.Register(youtubesource.YoutubeInfo{
-				YoutubeChannelId: ytChannelID2,
-			})
 			for {
 				select {
 				case ytMsg := <-messageChannel.youtubeEmitter.UpdateEmitter():
