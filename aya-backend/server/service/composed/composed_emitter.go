@@ -1,7 +1,8 @@
-package service
+package composed
 
 import (
 	models "aya-backend/db-models"
+	"aya-backend/server/service"
 	discordsource "aya-backend/server/service/discord"
 	"aya-backend/server/service/test_source"
 	youtubesource "aya-backend/server/service/youtube"
@@ -21,12 +22,12 @@ const (
 )
 
 type MessageEmitter struct {
-	ChatEmitter
+	service.ChatEmitter
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
 
-	updateEmitter chan MessageUpdate
+	updateEmitter chan service.MessageUpdate
 }
 
 func (messageChannel MessageEmitter) Register(resourceInfo any) {
@@ -39,14 +40,14 @@ func (messageChannel MessageEmitter) Register(resourceInfo any) {
 	}
 	for _, resource := range resources {
 		switch resource.ResourceType {
-		case Discord:
+		case service.Discord:
 			discordInfo, ok := resource.ResourceInfo.(discordsource.DiscordInfo)
 			if !ok {
 				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
 			} else {
 				messageChannel.discordEmitter.Register(discordInfo)
 			}
-		case Youtube:
+		case service.Youtube:
 			youtubeInfo, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
 			if !ok {
 				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
@@ -69,14 +70,14 @@ func (messageChannel MessageEmitter) Deregister(resourceInfo any) {
 	}
 	for _, resource := range resources {
 		switch resource.ResourceType {
-		case Discord:
+		case service.Discord:
 			discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
 			if !ok {
 				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
 			} else {
 				messageChannel.discordEmitter.Deregister(discordInfo)
 			}
-		case Youtube:
+		case service.Youtube:
 			youtubeInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
 			if !ok {
 				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
@@ -98,7 +99,7 @@ type MessageChannelConfig struct {
 	Router  *mux.Router
 }
 
-func (messageChannel MessageEmitter) UpdateEmitter() chan MessageUpdate {
+func (messageChannel MessageEmitter) UpdateEmitter() chan service.MessageUpdate {
 	return messageChannel.updateEmitter
 }
 
@@ -183,7 +184,7 @@ func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitt
 		}
 	}
 
-	msgC := make(chan MessageUpdate)
+	msgC := make(chan service.MessageUpdate)
 
 	if messageChannel.testEmitter != nil {
 		go func() {

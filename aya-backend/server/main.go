@@ -4,7 +4,7 @@ import (
 	"aya-backend/server/api"
 	"aya-backend/server/db"
 	"aya-backend/server/hubs"
-	"aya-backend/server/service"
+	"aya-backend/server/service/composed"
 	"aya-backend/server/socket"
 	"errors"
 	"fmt"
@@ -58,9 +58,9 @@ func getDB() (*gorm.DB, error) {
 
 }
 
-func parseEmitterConfig(msgSettingStr string) *service.MessageChannelConfig {
+func parseEmitterConfig(msgSettingStr string) *composed.MessageChannelConfig {
 
-	config := service.MessageChannelConfig{
+	config := composed.MessageChannelConfig{
 		Test:    false,
 		Discord: false,
 		Youtube: false,
@@ -106,7 +106,7 @@ func main() {
 	msgChanConfig.BaseURL = os.Getenv(REDIRECT_URL_ENV)
 	msgChanConfig.Router = r
 
-	msgChanEmitter := service.NewMessageEmitter(msgChanConfig)
+	msgChanEmitter := composed.NewMessageEmitter(msgChanConfig)
 	msgHub := hubs.NewMessageHub()
 	infoDB := db.NewInfoDB(gormDB)
 
