@@ -1,6 +1,7 @@
 package main
 
 import (
+	models "aya-backend/db-models"
 	"aya-backend/server/service"
 	discordsource "aya-backend/server/service/discord"
 	"aya-backend/server/service/test_source"
@@ -27,6 +28,67 @@ type MessagesChannel struct {
 	youtubeEmitter *youtubesource.YoutubeEmitter
 
 	updateEmitter chan service.MessageUpdate
+}
+
+func (messageChannel MessagesChannel) Register(resourceInfo any) {
+	// resourceInfo should be of type []Resource
+	resources, ok := resourceInfo.([]models.Resource)
+	if !ok {
+		// do thing since the resource is not of correct type
+		fmt.Printf("Cannot register %#v\n", resourceInfo)
+		return
+	}
+	for _, resource := range resources {
+		switch resource.ResourceType {
+		case service.Discord:
+			discordInfo, ok := resource.ResourceInfo.(discordsource.DiscordInfo)
+			if !ok {
+				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
+			} else {
+				messageChannel.discordEmitter.Register(discordInfo)
+			}
+		case service.Youtube:
+			youtubeInfo, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
+			if !ok {
+				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
+			} else {
+				messageChannel.youtubeEmitter.Register(youtubeInfo)
+			}
+		default:
+			fmt.Printf("Not supporting %s, cannot register %#v\n", resource.ResourceType.String(), resource.ResourceInfo)
+		}
+	}
+}
+
+func (messageChannel MessagesChannel) Deregister(resourceInfo any) {
+	// resourceInfo should be of type []Resource
+	resources, ok := resourceInfo.([]models.Resource)
+	if !ok {
+		// do thing since the resource is not of correct type
+		fmt.Printf("Cannot deregister %#v\n", resourceInfo)
+		return
+	}
+	for _, resource := range resources {
+		switch resource.ResourceType {
+		case service.Discord:
+			discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
+			if !ok {
+				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
+			} else {
+				messageChannel.discordEmitter.Deregister(discordInfo)
+			}
+		case service.Youtube:
+			youtubeInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
+			if !ok {
+				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
+			} else {
+				messageChannel.youtubeEmitter.Deregister(youtubeInfo)
+			}
+		default:
+			fmt.Printf("Not supporting %s, cannot deregister %#v\n", resource.ResourceType.String(), resource.ResourceInfo)
+
+		}
+	}
 }
 
 type MessageChannelConfig struct {
