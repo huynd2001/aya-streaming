@@ -42,17 +42,11 @@ type WSServer struct {
 }
 
 func (server *WSServer) registerSessionForMessages(sessionId string) {
-	resources := server.infoDB.GetResourcesOfSession(sessionId)
-	for _, resource := range resources {
-		(*server.msgHub).AddSession(sessionId, resource)
-	}
-	(*server.resourceRegister).Register(resources)
+	server.msgHub.AddSession(sessionId)
 }
 
 func (server *WSServer) deregisterSessionForMessages(sessionId string) {
-	resources := server.infoDB.GetResourcesOfSession(sessionId)
-	(*server.msgHub).RemoveSession(sessionId)
-	(*server.resourceRegister).Deregister(resources)
+	server.msgHub.RemoveSession(sessionId)
 }
 
 func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {

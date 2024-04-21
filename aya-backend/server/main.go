@@ -107,7 +107,7 @@ func main() {
 	msgChanConfig.Router = r
 
 	msgChanEmitter := composed.NewMessageEmitter(msgChanConfig)
-	msgHub := hubs.NewMessageHub()
+	msgHub := hubs.NewMessageHub(msgChanEmitter, gormDB)
 	infoDB := db.NewInfoDB(gormDB)
 
 	sc := make(chan os.Signal, 1)

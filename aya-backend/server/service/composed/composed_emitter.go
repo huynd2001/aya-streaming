@@ -30,7 +30,15 @@ type MessageEmitter struct {
 	updateEmitter chan service.MessageUpdate
 }
 
-func (messageChannel MessageEmitter) Register(resourceInfo any) {
+func (messageEmitter *MessageEmitter) GetDiscordEmitter() *discordsource.DiscordEmitter {
+	return messageEmitter.discordEmitter
+}
+
+func (messageEmitter *MessageEmitter) GetYoutubeEmitter() *youtubesource.YoutubeEmitter {
+	return messageEmitter.youtubeEmitter
+}
+
+func (messageEmitter *MessageEmitter) Register(resourceInfo any) {
 	// resourceInfo should be of type []Resource
 	resources, ok := resourceInfo.([]models.Resource)
 	if !ok {
@@ -45,14 +53,14 @@ func (messageChannel MessageEmitter) Register(resourceInfo any) {
 			if !ok {
 				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
 			} else {
-				messageChannel.discordEmitter.Register(discordInfo)
+				messageEmitter.discordEmitter.Register(discordInfo)
 			}
 		case service.Youtube:
 			youtubeInfo, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
 			if !ok {
 				fmt.Printf("Cannot register %#v\n", resource.ResourceInfo)
 			} else {
-				messageChannel.youtubeEmitter.Register(youtubeInfo)
+				messageEmitter.youtubeEmitter.Register(youtubeInfo)
 			}
 		default:
 			fmt.Printf("Not supporting %s, cannot register %#v\n", resource.ResourceType.String(), resource.ResourceInfo)
@@ -60,7 +68,7 @@ func (messageChannel MessageEmitter) Register(resourceInfo any) {
 	}
 }
 
-func (messageChannel MessageEmitter) Deregister(resourceInfo any) {
+func (messageEmitter *MessageEmitter) Deregister(resourceInfo any) {
 	// resourceInfo should be of type []Resource
 	resources, ok := resourceInfo.([]models.Resource)
 	if !ok {
@@ -75,14 +83,14 @@ func (messageChannel MessageEmitter) Deregister(resourceInfo any) {
 			if !ok {
 				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
 			} else {
-				messageChannel.discordEmitter.Deregister(discordInfo)
+				messageEmitter.discordEmitter.Deregister(discordInfo)
 			}
 		case service.Youtube:
 			youtubeInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
 			if !ok {
 				fmt.Printf("Cannot deregister %#v\n", resourceInfo)
 			} else {
-				messageChannel.youtubeEmitter.Deregister(youtubeInfo)
+				messageEmitter.youtubeEmitter.Deregister(youtubeInfo)
 			}
 		default:
 			fmt.Printf("Not supporting %s, cannot deregister %#v\n", resource.ResourceType.String(), resource.ResourceInfo)
@@ -99,28 +107,28 @@ type MessageChannelConfig struct {
 	Router  *mux.Router
 }
 
-func (messageChannel MessageEmitter) UpdateEmitter() chan service.MessageUpdate {
-	return messageChannel.updateEmitter
+func (messageEmitter *MessageEmitter) UpdateEmitter() chan service.MessageUpdate {
+	return messageEmitter.updateEmitter
 }
 
-func (messageChannel MessageEmitter) CloseEmitter() error {
+func (messageEmitter *MessageEmitter) CloseEmitter() error {
 
-	close(messageChannel.updateEmitter)
+	close(messageEmitter.updateEmitter)
 
 	var testError error = nil
 	var discordError error = nil
 	var youtubeError error = nil
 
-	if messageChannel.testEmitter != nil {
-		testError = messageChannel.testEmitter.CloseEmitter()
+	if messageEmitter.testEmitter != nil {
+		testError = messageEmitter.testEmitter.CloseEmitter()
 	}
 
-	if messageChannel.discordEmitter != nil {
-		discordError = messageChannel.discordEmitter.CloseEmitter()
+	if messageEmitter.discordEmitter != nil {
+		discordError = messageEmitter.discordEmitter.CloseEmitter()
 	}
 
-	if messageChannel.youtubeEmitter != nil {
-		testError = messageChannel.youtubeEmitter.CloseEmitter()
+	if messageEmitter.youtubeEmitter != nil {
+		testError = messageEmitter.youtubeEmitter.CloseEmitter()
 	}
 
 	err := errors.Join(testError, discordError, youtubeError)

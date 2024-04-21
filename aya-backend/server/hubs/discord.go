@@ -11,12 +11,14 @@ type DiscordResourceHub struct {
 	mutex                sync.RWMutex
 	guildChannel2Session map[string]map[string]bool
 	session2GuildChannel map[string]map[string]bool
+	emitter              *discordsource.DiscordEmitter
 }
 
-func NewDiscordResourceHub() *DiscordResourceHub {
+func NewDiscordResourceHub(emitter *discordsource.DiscordEmitter) *DiscordResourceHub {
 	return &DiscordResourceHub{
 		guildChannel2Session: make(map[string]map[string]bool),
 		session2GuildChannel: make(map[string]map[string]bool),
+		emitter:              emitter,
 	}
 }
 
@@ -55,16 +57,77 @@ func (hub *DiscordResourceHub) RemoveSession(sessionId string) {
 
 }
 
-func (hub *DiscordResourceHub) AddSession(sessionId string, resourceInfo any) {
+func getDiscordGuildChannel(guildChannel string) (guildId string, channelId string) {
+	items := strings.Split(guildChannel, "/")
+	if len(items) != 2 {
+		guildId = ""
+		channelId = ""
+	} else {
+		guildId = items[0]
+		channelId = items[1]
+	}
+	return
+}
+
+func diffDiscord(
+	oldResources map[string]bool,
+	newResources map[string]bool) (
+	removeResources []discordsource.DiscordInfo,
+	addResources []discordsource.DiscordInfo,
+) {
+	for oldGuildChannel := range oldResources {
+		if _, ok := newResources[oldGuildChannel]; !ok {
+			guildId, channelId := getDiscordGuildChannel(oldGuildChannel)
+			removeResources = append(removeResources, discordsource.DiscordInfo{
+				DiscordGuildId:   guildId,
+				DiscordChannelId: channelId,
+			})
+		}
+	}
+	for newGuildChannel := range newResources {
+		if _, ok := oldResources[newGuildChannel]; !ok {
+			guildId, channelId := getDiscordGuildChannel(newGuildChannel)
+			addResources = append(addResources, discordsource.DiscordInfo{
+				DiscordGuildId:   guildId,
+				DiscordChannelId: channelId,
+			})
+		}
+	}
+	return
+}
+
+func (hub *DiscordResourceHub) AddSession(sessionId string) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
-	discordInfo, ok := resourceInfo.(discordsource.DiscordInfo)
-	if !ok {
-		// do nothing
-		return
+}
+
+func (hub *DiscordResourceHub) RegisterSessionResources(sessionId string, resources []discordsource.DiscordInfo) {
+	hub.mutex.Lock()
+	defer hub.mutex.Unlock()
+	var oldResources = hub.session2GuildChannel[sessionId]
+	if oldResources == nil {
+		oldResources = make(map[string]bool)
 	}
-	guildId := discordInfo.DiscordGuildId
-	channelId := discordInfo.DiscordChannelId
+	newResources := make(map[string]bool)
+	for _, resource := range resources {
+		guildChannel := strings.Join([]string{resource.DiscordGuildId, resource.DiscordChannelId}, "/")
+		newResources[guildChannel] = true
+	}
+	removeRs, addRs := diffDiscord(oldResources, newResources)
+	for _, removeR := range removeRs {
+		hub.emitter.Deregister(removeR)
+		hub.deregisterSession(sessionId, removeR)
+	}
+	for _, addR := range addRs {
+		hub.emitter.Register(addR)
+		hub.registerSession(sessionId, addR)
+	}
+}
+
+func (hub *DiscordResourceHub) registerSession(sessionId string, resourceInfo discordsource.DiscordInfo) {
+
+	guildId := resourceInfo.DiscordGuildId
+	channelId := resourceInfo.DiscordChannelId
 	guildChannel := strings.Join([]string{guildId, channelId}, "/")
 
 	if hub.session2GuildChannel[sessionId] == nil {
@@ -75,4 +138,17 @@ func (hub *DiscordResourceHub) AddSession(sessionId string, resourceInfo any) {
 	}
 	hub.session2GuildChannel[sessionId][guildChannel] = true
 	hub.guildChannel2Session[guildChannel][sessionId] = true
+}
+
+func (hub *DiscordResourceHub) deregisterSession(sessionId string, resourceInfo discordsource.DiscordInfo) {
+	guildId := resourceInfo.DiscordGuildId
+	channelId := resourceInfo.DiscordChannelId
+	guildChannel := strings.Join([]string{guildId, channelId}, "/")
+
+	if hub.session2GuildChannel[sessionId] != nil {
+		delete(hub.session2GuildChannel[sessionId], guildChannel)
+	}
+	if hub.guildChannel2Session[guildChannel] != nil {
+		delete(hub.guildChannel2Session[guildChannel], sessionId)
+	}
 }

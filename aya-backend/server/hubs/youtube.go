@@ -10,12 +10,14 @@ type YoutubeResourceHub struct {
 	mutex           sync.RWMutex
 	channel2Session map[string]map[string]bool
 	session2Channel map[string]map[string]bool
+	emitter         *youtubesource.YoutubeEmitter
 }
 
-func NewYoutubeResourceHub() *YoutubeResourceHub {
+func NewYoutubeResourceHub(emitter *youtubesource.YoutubeEmitter) *YoutubeResourceHub {
 	return &YoutubeResourceHub{
 		channel2Session: make(map[string]map[string]bool),
 		session2Channel: make(map[string]map[string]bool),
+		emitter:         emitter,
 	}
 }
 
@@ -52,15 +54,60 @@ func (hub *YoutubeResourceHub) RemoveSession(sessionId string) {
 	delete(hub.session2Channel, sessionId)
 }
 
-func (hub *YoutubeResourceHub) AddSession(sessionId string, resourceInfo any) {
+func (hub *YoutubeResourceHub) AddSession(sessionId string) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
-	ytResourceInfo, ok := resourceInfo.(youtubesource.YoutubeInfo)
-	if !ok {
-		// do nothing
-		return
+}
+
+func diffYoutube(
+	oldResources map[string]bool,
+	newResources map[string]bool) (
+	removeResources []youtubesource.YoutubeInfo,
+	addResources []youtubesource.YoutubeInfo,
+) {
+	for oldChannelId := range oldResources {
+		if _, ok := newResources[oldChannelId]; !ok {
+			removeResources = append(removeResources, youtubesource.YoutubeInfo{
+				YoutubeChannelId: oldChannelId,
+			})
+		}
 	}
-	youtubeChannelId := ytResourceInfo.YoutubeChannelId
+	for newChannelId := range newResources {
+		if _, ok := oldResources[newChannelId]; !ok {
+			addResources = append(addResources, youtubesource.YoutubeInfo{
+				YoutubeChannelId: newChannelId,
+			})
+		}
+	}
+	return
+}
+
+func (hub *YoutubeResourceHub) RegisterSessionResources(sessionId string, resources []youtubesource.YoutubeInfo) {
+	hub.mutex.Lock()
+	defer hub.mutex.Unlock()
+	// get the current resources attacked to this session
+	var oldResources = hub.session2Channel[sessionId]
+	if oldResources == nil {
+		oldResources = make(map[string]bool)
+	}
+	newResources := make(map[string]bool)
+	for _, resourceInfo := range resources {
+		newResources[resourceInfo.YoutubeChannelId] = true
+	}
+	removeRs, addRs := diffYoutube(oldResources, newResources)
+	for _, removeR := range removeRs {
+		hub.emitter.Deregister(removeR)
+		hub.deregisterSession(sessionId, removeR)
+	}
+	for _, addR := range addRs {
+		hub.emitter.Register(addR)
+		hub.registerSession(sessionId, addR)
+	}
+}
+
+func (hub *YoutubeResourceHub) registerSession(sessionId string, resourceInfo youtubesource.YoutubeInfo) {
+
+	youtubeChannelId := resourceInfo.YoutubeChannelId
 	if hub.session2Channel[sessionId] == nil {
 		hub.session2Channel[sessionId] = make(map[string]bool)
 	}
@@ -70,4 +117,14 @@ func (hub *YoutubeResourceHub) AddSession(sessionId string, resourceInfo any) {
 	hub.session2Channel[sessionId][youtubeChannelId] = true
 	hub.channel2Session[youtubeChannelId][sessionId] = true
 
+}
+
+func (hub *YoutubeResourceHub) deregisterSession(sessionId string, resourceInfo youtubesource.YoutubeInfo) {
+	youtubeChannelId := resourceInfo.YoutubeChannelId
+	if hub.session2Channel[sessionId] != nil {
+		delete(hub.session2Channel[sessionId], youtubeChannelId)
+	}
+	if hub.channel2Session[youtubeChannelId] != nil {
+		delete(hub.channel2Session[youtubeChannelId], sessionId)
+	}
 }
