@@ -2,7 +2,6 @@ package main
 
 import (
 	"aya-backend/server/api"
-	"aya-backend/server/db"
 	"aya-backend/server/hubs"
 	"aya-backend/server/service/composed"
 	"aya-backend/server/socket"
@@ -108,14 +107,13 @@ func main() {
 
 	msgChanEmitter := composed.NewMessageEmitter(msgChanConfig)
 	msgHub := hubs.NewMessageHub(msgChanEmitter, gormDB)
-	infoDB := db.NewInfoDB(gormDB)
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	streamRouter := r.PathPrefix("/stream").Subrouter()
 
-	wsServer, err := socket.NewWSServer(streamRouter, msgHub, msgChanEmitter, infoDB)
+	wsServer, err := socket.NewWSServer(streamRouter, msgHub, msgChanEmitter)
 	if err != nil {
 		fmt.Printf("Error during create the websocket server: %s\n", err.Error())
 		return

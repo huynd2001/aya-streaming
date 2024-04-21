@@ -1,7 +1,6 @@
 package socket
 
 import (
-	"aya-backend/server/db"
 	"aya-backend/server/hubs"
 	. "aya-backend/server/service"
 	. "aya-backend/server/service/composed"
@@ -36,7 +35,6 @@ type WSServer struct {
 
 	msgHub           *hubs.MessageHub
 	resourceRegister *MessageEmitter
-	infoDB           *db.InfoDB
 
 	ChanMap map[string]*WSConnectionMap
 }
@@ -145,7 +143,6 @@ func NewWSServer(
 	s *mux.Router,
 	msgHub *hubs.MessageHub,
 	resourceRegister *MessageEmitter,
-	infoDB *db.InfoDB,
 ) (*WSServer, error) {
 
 	websiteOrigin := os.Getenv(WEBSITE_HOST_ORIGIN_ENV)
@@ -176,7 +173,6 @@ func NewWSServer(
 	wsServer := WSServer{
 		upg:              &upg,
 		msgHub:           msgHub,
-		infoDB:           infoDB,
 		resourceRegister: resourceRegister,
 		ChanMap:          make(map[string]*WSConnectionMap),
 	}
