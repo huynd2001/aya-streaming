@@ -49,12 +49,12 @@ func getDB() (*gorm.DB, error) {
 		dataLocation = sqlDbPath
 	}
 
-	db, err := gorm.Open(sqlite.Open(dataLocation), &gorm.Config{})
+	gormDB, err := gorm.Open(sqlite.Open(dataLocation), &gorm.Config{})
 	if err != nil {
 		fmt.Printf("Failed to connect to database!\n")
 		return nil, err
 	}
-	return db, nil
+	return gormDB, nil
 
 }
 

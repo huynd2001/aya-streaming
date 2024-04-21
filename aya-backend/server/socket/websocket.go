@@ -57,7 +57,8 @@ func (server *WSServer) deregisterSessionForMessages(sessionId string) {
 
 func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
-	id := r.PathValue("id")
+	vars := mux.Vars(r)
+	id := vars["id"]
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte("id is empty"))
