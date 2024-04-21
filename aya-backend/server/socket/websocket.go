@@ -58,8 +58,8 @@ func (server *WSServer) deregisterSessionForMessages(sessionId string) {
 func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
-	id := vars["id"]
-	if id == "" {
+	sessionUUID := vars["id"]
+	if sessionUUID == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte("id is empty"))
 		return
@@ -73,18 +73,18 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 
 	wsServer.mutex.Lock()
 	msgChannel := make(chan MessageUpdate)
-	if wsServer.ChanMap[id] == nil {
-		wsServer.ChanMap[id] = &WSConnectionMap{
+	if wsServer.ChanMap[sessionUUID] == nil {
+		wsServer.ChanMap[sessionUUID] = &WSConnectionMap{
 			MessageConnChan: make(map[int]chan MessageUpdate),
 			CountId:         0,
 		}
 	}
-	wsServer.ChanMap[id].CountId += 1
+	wsServer.ChanMap[sessionUUID].CountId += 1
 
-	wsConnectionId := wsServer.ChanMap[id].CountId
+	wsConnectionId := wsServer.ChanMap[sessionUUID].CountId
 
-	wsServer.ChanMap[id].MessageConnChan[wsConnectionId] = msgChannel
-	wsServer.registerSessionForMessages(id)
+	wsServer.ChanMap[sessionUUID].MessageConnChan[wsConnectionId] = msgChannel
+	wsServer.registerSessionForMessages(sessionUUID)
 	wsServer.mutex.Unlock()
 
 	defer func(c *ws.Conn) {
@@ -94,12 +94,12 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 	defaultCloseHandler := c.CloseHandler()
 
 	c.SetCloseHandler(func(code int, text string) error {
-		fmt.Println("close websocket")
+		fmt.Printf("close websocket to %s\n", sessionUUID)
 		wsServer.mutex.Lock()
-		if wsServer.ChanMap[id] != nil {
-			delete(wsServer.ChanMap[id].MessageConnChan, wsConnectionId)
-			if len(wsServer.ChanMap[id].MessageConnChan) == 0 {
-				wsServer.deregisterSessionForMessages(id)
+		if wsServer.ChanMap[sessionUUID] != nil {
+			delete(wsServer.ChanMap[sessionUUID].MessageConnChan, wsConnectionId)
+			if len(wsServer.ChanMap[sessionUUID].MessageConnChan) == 0 {
+				wsServer.deregisterSessionForMessages(sessionUUID)
 			}
 		}
 		wsServer.mutex.Unlock()
@@ -107,7 +107,7 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 
-	fmt.Printf("Session %s is connected\n", id)
+	fmt.Printf("Session %s is connected\n", sessionUUID)
 
 	for {
 		newMessage := <-msgChannel
@@ -173,8 +173,6 @@ func NewWSServer(
 		if err != nil {
 			return false
 		}
-
-		fmt.Println(u.Host)
 
 		return slices.ContainsFunc(acceptableOrigin, func(acceptableHost string) bool {
 			return equalASCIIFold(u.Host, acceptableHost)
