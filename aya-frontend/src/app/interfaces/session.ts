@@ -5,6 +5,7 @@ export interface SessionDialogInfo {
 
 export interface SessionInfo {
   ID: number;
+  UUID: string;
   Resources: string;
   IsOn: boolean;
   IsDelete: boolean;

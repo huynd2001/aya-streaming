@@ -36,6 +36,9 @@ import {
   MatSlideToggle,
   MatSlideToggleChange,
 } from '@angular/material/slide-toggle';
+import { injectRouter } from '@analogjs/router';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-home',
@@ -84,12 +87,23 @@ export default class HomePage implements OnInit, OnDestroy {
   private readonly matIconRegistry = inject(MatIconRegistry);
   private readonly domSanitizer = inject(DomSanitizer);
   private readonly dialog = inject(MatDialog);
+  private readonly router = injectRouter();
 
-  constructor(private _snackBar: MatSnackBar) {
+  constructor(
+    private _snackBar: MatSnackBar,
+    private clipboard: Clipboard,
+  ) {
     this.matIconRegistry.addSvgIcon(
       `aya_logo`,
       this.domSanitizer.bypassSecurityTrustResourceUrl('/aya.svg'),
     );
+  }
+
+  copyToClipboard(streamUUID: string) {
+    this.clipboard.copy(`${environment.homepageUrl}/stream/${streamUUID}`);
+    this._snackBar.open(`Session stream link copied!`, 'Dismiss', {
+      duration: 3000,
+    });
   }
 
   ngOnInit(): void {

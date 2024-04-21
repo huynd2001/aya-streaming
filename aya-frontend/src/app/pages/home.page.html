@@ -38,7 +38,12 @@
 
 @if (sessionInfo) { @for (session of sessionInfo; track $index) {
 <mat-card>
-  <mat-card-header>Session ID: {{ session.ID }}</mat-card-header>
+  <mat-card-header>
+    <p>Session ID: {{ session.ID }}</p>
+    <button mat-icon-button (click)="copyToClipboard(session.UUID)">
+      <mat-icon>link</mat-icon>
+    </button>
+  </mat-card-header>
   <mat-card-content>
     <app-session-info-display
       [displaySessionInfo]="session"
