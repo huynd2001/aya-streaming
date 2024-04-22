@@ -21,16 +21,17 @@ func newYoutubeRegister(ytService *yt.Service) *youtubeRegister {
 		apiCaller:         newApiCaller(ytService),
 		ytService:         ytService,
 	}
-	if ytService == nil {
-		// Wait until ytService is here before any registration can start
-		youtubeReg.mutex.Lock()
-	}
 	return &youtubeReg
 }
 
 func (register *youtubeRegister) deregisterChannel(channelId string) {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
+	if register.ytService == nil {
+		// Do nothing
+		fmt.Printf("ytService not set up, skipping deregistering %s\n", channelId)
+		return
+	}
 	if register.channelKillSignal[channelId] == nil {
 		// Don't have to do anything
 		fmt.Printf("channel %s have not been registered, doing nothing\n", channelId)
@@ -45,6 +46,11 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
+
+	if register.ytService == nil {
+		fmt.Printf("ytService not set up, skipping registering %s\n", channelId)
+		return
+	}
 
 	if register.channelKillSignal[channelId] != nil {
 		// Do not have to do anything, since it is already been registered
@@ -178,7 +184,6 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 func (register *youtubeRegister) Start(ytService *yt.Service) {
 	register.ytService = ytService
 	register.apiCaller.Start(ytService)
-	register.mutex.Unlock()
 }
 
 func (register *youtubeRegister) Stop() {
