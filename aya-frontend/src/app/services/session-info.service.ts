@@ -63,7 +63,7 @@ export class SessionInfoService {
         sessionInfoUrl,
         {
           user_id: userId,
-          is_on: isOn === undefined ? false : isOn,
+          is_on: isOn,
           id: sessionDialogInfo.id,
           resources: JSON.stringify(sessionDialogInfo.resources),
         },
