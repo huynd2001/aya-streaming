@@ -22,14 +22,19 @@ export class SessionInfoService {
         },
       })
       .pipe(
-        catchError(
-          (err: any): Observable<{ data?: SessionInfo[]; err?: string }> => {
-            return of({
-              data: undefined,
-              err: JSON.stringify(err),
-            });
-          },
-        ),
+        map((result) => {
+          if (!result) {
+            throw Error('result cannot be parsed');
+          }
+          if (result?.err) {
+            throw result.err;
+          } else {
+            return {
+              data: result.data,
+              err: undefined,
+            };
+          }
+        }),
       );
   }
 
@@ -38,18 +43,34 @@ export class SessionInfoService {
     userId: number,
     sessionDialogInfo: SessionDialogInfo,
   ) {
-    return this.http.post<{ data?: SessionInfo; err?: string }>(
-      sessionInfoUrl,
-      {
-        user_id: userId,
-        resources: JSON.stringify(sessionDialogInfo.resources),
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+    return this.http
+      .post<{ data?: SessionInfo; err?: string }>(
+        sessionInfoUrl,
+        {
+          user_id: userId,
+          resources: JSON.stringify(sessionDialogInfo.resources),
         },
-      },
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      )
+      .pipe(
+        map((result) => {
+          if (!result) {
+            throw Error('result cannot be parsed');
+          }
+          if (result?.err) {
+            throw result.err;
+          } else {
+            return {
+              data: result.data,
+              err: undefined,
+            };
+          }
+        }),
+      );
   }
 
   updateSession$(
@@ -75,17 +96,24 @@ export class SessionInfoService {
       )
       .pipe(
         map((result) => {
-          if (result.err) {
+          if (!result) {
+            throw Error('result cannot be parsed');
+          }
+          if (result?.err) {
             throw result.err;
+          } else {
+            return {
+              data: result.data,
+              err: undefined,
+            };
           }
         }),
       );
   }
 
   deleteSession$(accessToken: string, userId: number, sessionId: number) {
-    return this.http.delete<{ data?: SessionInfo; err?: string }>(
-      sessionInfoUrl,
-      {
+    return this.http
+      .delete<{ data?: SessionInfo; err?: string }>(sessionInfoUrl, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -93,7 +121,22 @@ export class SessionInfoService {
           user_id: userId,
           id: sessionId,
         },
-      },
-    );
+      })
+      .pipe(
+        map(
+          (
+            result,
+          ): { data: SessionInfo | undefined; err: string | undefined } => {
+            if (!result) {
+              throw Error('result cannot be parsed');
+            }
+            if (result.err) {
+              throw Error(result.err);
+            } else {
+              return { data: result.data, err: undefined };
+            }
+          },
+        ),
+      );
   }
 }

@@ -40,9 +40,6 @@
 <mat-card>
   <mat-card-header>
     <p>Session ID: {{ session.ID }}</p>
-    <button mat-icon-button (click)="copyToClipboard(session.UUID)">
-      <mat-icon>link</mat-icon>
-    </button>
   </mat-card-header>
   <mat-card-content>
     <app-session-info-display
@@ -65,6 +62,14 @@
       (click)="openDeleteDialog($index)"
     >
       <mat-icon class="icon-inside-button">delete</mat-icon>
+    </button>
+    <button
+      mat-icon-button
+      class="icon"
+      aria-label="stream link"
+      (click)="copyURLToClipboard(session.UUID)"
+    >
+      <mat-icon>link</mat-icon>
     </button>
     <mat-slide-toggle
       [checked]="session.IsOn"

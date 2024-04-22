@@ -99,7 +99,7 @@ export default class HomePage implements OnInit, OnDestroy {
     );
   }
 
-  copyToClipboard(streamUUID: string) {
+  copyURLToClipboard(streamUUID: string) {
     this.clipboard.copy(`${environment.homepageUrl}/stream/${streamUUID}`);
     this._snackBar.open(`Session stream link copied!`, 'Dismiss', {
       duration: 3000,
