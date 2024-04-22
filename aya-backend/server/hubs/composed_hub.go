@@ -45,9 +45,11 @@ func NewMessageHub(emitter *composed.MessageEmitter, gormDB *gorm.DB) *MessageHu
 		for {
 			select {
 			case <-time.After(DATA_RETRIEVAL_INTERVAL):
-				fmt.Printf("Data retrieval start\n")
 				newTime := time.Now()
 				resourceInfoMap := msgHub.infoDB.GetResourcesInfo(msgHub.registeredSessions, lastUpdateTime)
+				if len(resourceInfoMap) > 0 {
+					fmt.Println("Changes detected:")
+				}
 				for sessionId, resources := range resourceInfoMap {
 					fmt.Printf("Update session with Id %s\n", sessionId)
 					fmt.Printf("New resources info: %s\n", resources)

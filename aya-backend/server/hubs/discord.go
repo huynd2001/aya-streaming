@@ -3,6 +3,7 @@ package hubs
 import (
 	discordsource "aya-backend/server/service/discord"
 	"fmt"
+	"github.com/fatih/color"
 	"strings"
 	"sync"
 )
@@ -73,6 +74,7 @@ func getDiscordGuildChannel(guildChannel string) (guildId string, channelId stri
 func diffDiscord(
 	oldResources map[string]bool,
 	newResources map[string]bool) (
+	similarResources []discordsource.DiscordInfo,
 	removeResources []discordsource.DiscordInfo,
 	addResources []discordsource.DiscordInfo,
 ) {
@@ -80,6 +82,12 @@ func diffDiscord(
 		if _, ok := newResources[oldGuildChannel]; !ok {
 			guildId, channelId := getDiscordGuildChannel(oldGuildChannel)
 			removeResources = append(removeResources, discordsource.DiscordInfo{
+				DiscordGuildId:   guildId,
+				DiscordChannelId: channelId,
+			})
+		} else {
+			guildId, channelId := getDiscordGuildChannel(oldGuildChannel)
+			similarResources = append(similarResources, discordsource.DiscordInfo{
 				DiscordGuildId:   guildId,
 				DiscordChannelId: channelId,
 			})
@@ -114,14 +122,19 @@ func (hub *DiscordResourceHub) RegisterSessionResources(sessionId string, resour
 		guildChannel := strings.Join([]string{resource.DiscordGuildId, resource.DiscordChannelId}, "/")
 		newResources[guildChannel] = true
 	}
-	removeRs, addRs := diffDiscord(oldResources, newResources)
+	similarRs, removeRs, addRs := diffDiscord(oldResources, newResources)
+	for _, similarR := range similarRs {
+		fmt.Printf("Discord: %s->%#v\n", sessionId, similarR)
+	}
 	for _, removeR := range removeRs {
-		fmt.Printf("Discord: deregistering %#v from session %s\n", removeR, sessionId)
+		red := color.New(color.FgRed).SprintfFunc()
+		fmt.Printf("Discord: %s->%s\n", sessionId, red("-%#v", removeRs))
 		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
 	for _, addR := range addRs {
-		fmt.Printf("Discord: registering %s from session %s\n", addR, sessionId)
+		green := color.New(color.FgGreen).SprintfFunc()
+		fmt.Printf("Discord: %s->%s\n", sessionId, green("-%#v", addR))
 		hub.emitter.Register(sessionId, addR)
 		hub.registerSession(sessionId, addR)
 	}

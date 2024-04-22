@@ -2,6 +2,8 @@ package hubs
 
 import (
 	youtubesource "aya-backend/server/service/youtube"
+	"fmt"
+	"github.com/fatih/color"
 	"sync"
 )
 
@@ -62,12 +64,17 @@ func (hub *YoutubeResourceHub) AddSession(sessionId string) {
 func diffYoutube(
 	oldResources map[string]bool,
 	newResources map[string]bool) (
+	similarResources []youtubesource.YoutubeInfo,
 	removeResources []youtubesource.YoutubeInfo,
 	addResources []youtubesource.YoutubeInfo,
 ) {
 	for oldChannelId := range oldResources {
 		if _, ok := newResources[oldChannelId]; !ok {
 			removeResources = append(removeResources, youtubesource.YoutubeInfo{
+				YoutubeChannelId: oldChannelId,
+			})
+		} else {
+			similarResources = append(similarResources, youtubesource.YoutubeInfo{
 				YoutubeChannelId: oldChannelId,
 			})
 		}
@@ -94,12 +101,19 @@ func (hub *YoutubeResourceHub) RegisterSessionResources(sessionId string, resour
 	for _, resourceInfo := range resources {
 		newResources[resourceInfo.YoutubeChannelId] = true
 	}
-	removeRs, addRs := diffYoutube(oldResources, newResources)
+	similarRs, removeRs, addRs := diffYoutube(oldResources, newResources)
+	for _, similarR := range similarRs {
+		fmt.Printf("Youtube: %s->%#v\n", sessionId, similarR)
+	}
 	for _, removeR := range removeRs {
+		red := color.New(color.FgRed).SprintfFunc()
+		fmt.Printf("Discord: %s->%s\n", sessionId, red("-%#v", removeRs))
 		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
 	for _, addR := range addRs {
+		green := color.New(color.FgGreen).SprintfFunc()
+		fmt.Printf("Discord: %s->%s\n", sessionId, green("-%#v", addR))
 		hub.emitter.Register(sessionId, addR)
 		hub.registerSession(sessionId, addR)
 	}
