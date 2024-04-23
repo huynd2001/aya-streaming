@@ -47,45 +47,78 @@ func (server *WSServer) deregisterSessionForMessages(sessionId string) {
 	server.msgHub.RemoveSession(sessionId)
 }
 
-func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
-
-	vars := mux.Vars(r)
-	sessionUUID := vars["id"]
-	if sessionUUID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("id is empty"))
-		return
-	}
-
-	c, err := wsServer.upg.Upgrade(w, r, nil)
-	if err != nil {
-		fmt.Printf("upgrade: %s\n", err.Error())
-		return
-	}
-
-	wsServer.mutex.Lock()
-	msgChannel := make(chan MessageUpdate)
-	if wsServer.ChanMap[sessionUUID] == nil {
-		wsServer.ChanMap[sessionUUID] = &WSConnectionMap{
-			MessageConnChan: make(map[int]chan MessageUpdate),
-			CountId:         0,
+func wsHandler(wsServer *WSServer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		sessionUUID := vars["id"]
+		if sessionUUID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("id is empty"))
+			return
 		}
-	}
-	wsServer.ChanMap[sessionUUID].CountId += 1
 
-	wsConnectionId := wsServer.ChanMap[sessionUUID].CountId
+		c, err := wsServer.upg.Upgrade(w, r, nil)
+		if err != nil {
+			fmt.Printf("upgrade: %s\n", err.Error())
+			return
+		}
 
-	wsServer.ChanMap[sessionUUID].MessageConnChan[wsConnectionId] = msgChannel
-	wsServer.registerSessionForMessages(sessionUUID)
-	wsServer.mutex.Unlock()
+		wsServer.mutex.Lock()
+		msgChannel := make(chan MessageUpdate)
+		if wsServer.ChanMap[sessionUUID] == nil {
+			wsServer.ChanMap[sessionUUID] = &WSConnectionMap{
+				MessageConnChan: make(map[int]chan MessageUpdate),
+				CountId:         0,
+			}
+		}
+		wsServer.ChanMap[sessionUUID].CountId += 1
 
-	defer func(c *ws.Conn) {
+		wsConnectionId := wsServer.ChanMap[sessionUUID].CountId
+
+		wsServer.ChanMap[sessionUUID].MessageConnChan[wsConnectionId] = msgChannel
+		wsServer.registerSessionForMessages(sessionUUID)
+		wsServer.mutex.Unlock()
+
+		fmt.Printf("Session %s is connected\n", sessionUUID)
+
+		errChannel := make(chan error)
+
+		go func() {
+			for {
+				_, msg, err := c.ReadMessage()
+				fmt.Printf("Message from connection: %s\n", string(msg))
+				if err != nil {
+					errChannel <- err
+					return
+				}
+			}
+		}()
+
+		var connectErr error
+
+		for connectErr == nil {
+			select {
+			case newMessage := <-msgChannel:
+				newMessageStr, err := json.Marshal(newMessage)
+				if err != nil {
+					fmt.Printf("Error found while marshal msg:\n%s\n", err.Error())
+					continue
+				}
+				err = c.WriteMessage(ws.TextMessage, newMessageStr)
+				if err != nil {
+					fmt.Printf("Error counter while send msg:\n%s\n", err.Error())
+					connectErr = err
+				}
+			case err := <-errChannel:
+				if err != nil {
+					fmt.Printf("Error from connection:\n%s\n", err.Error())
+					connectErr = err
+				}
+			}
+		}
+
+		fmt.Printf("End sending message to %s, conn#%d, start cleaning up\n", sessionUUID, wsConnectionId)
 		_ = c.Close()
-	}(c)
-
-	defaultCloseHandler := c.CloseHandler()
-
-	c.SetCloseHandler(func(code int, text string) error {
 		fmt.Printf("close websocket to %s\n", sessionUUID)
 		wsServer.mutex.Lock()
 		if wsServer.ChanMap[sessionUUID] != nil {
@@ -95,25 +128,7 @@ func handleWSConn(wsServer *WSServer, w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		wsServer.mutex.Unlock()
-		err := defaultCloseHandler(code, text)
-		return err
-	})
-
-	fmt.Printf("Session %s is connected\n", sessionUUID)
-
-	for {
-		newMessage := <-msgChannel
-		newMessageStr, err := json.Marshal(newMessage)
-		if err != nil {
-			fmt.Printf("Error found while marshal msg:\n%s\n", err.Error())
-			continue
-		}
-
-		err = c.WriteMessage(ws.TextMessage, newMessageStr)
-		if err != nil {
-			fmt.Printf("Error counter while send msg:\n%s\n", err.Error())
-			break
-		}
+		fmt.Printf("Session %s is disconnected\n", sessionUUID)
 	}
 }
 
@@ -177,9 +192,7 @@ func NewWSServer(
 		ChanMap:          make(map[string]*WSConnectionMap),
 	}
 
-	s.HandleFunc("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handleWSConn(&wsServer, w, r)
-	})
+	s.HandleFunc("/{id}", wsHandler(&wsServer))
 
 	fmt.Println("Web socket ready!")
 
