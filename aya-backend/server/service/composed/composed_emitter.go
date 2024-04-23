@@ -106,21 +106,14 @@ func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitt
 		ytApiKey := os.Getenv(YOUTUBE_API_KEY_ENV)
 		ytClientId := os.Getenv(YOUTUBE_CLIENT_ID_ENV)
 		ytClientSecret := os.Getenv(YOUTUBE_CLIENT_SECRET_ENV)
-		ytFlow := os.Getenv(YOUTUBE_FLOW_ENV)
 
 		ytEmitterConfig := &youtubesource.YoutubeEmitterConfig{}
 
-		switch ytFlow {
-		case "api":
-			ytEmitterConfig.UseApiKey = true
-			ytEmitterConfig.ApiKey = ytApiKey
-		case "oauth":
-			ytEmitterConfig.UseOAuth = true
-			ytEmitterConfig.ClientID = ytClientId
-			ytEmitterConfig.ClientSecret = ytClientSecret
-			ytEmitterConfig.Router = messageChannelConfig.Router.PathPrefix("/auth").Subrouter()
-			ytEmitterConfig.RedirectBasedUrl = fmt.Sprintf("%s/auth", messageChannelConfig.BaseURL)
-		}
+		ytEmitterConfig.ApiKey = ytApiKey
+		ytEmitterConfig.ClientID = ytClientId
+		ytEmitterConfig.ClientSecret = ytClientSecret
+		ytEmitterConfig.Router = messageChannelConfig.Router.PathPrefix("/auth").Subrouter()
+		ytEmitterConfig.RedirectBasedUrl = fmt.Sprintf("%s/auth", messageChannelConfig.BaseURL)
 
 		youtubeEmitter, err := youtubesource.NewEmitter(ytEmitterConfig)
 		if err != nil {
@@ -161,7 +154,6 @@ func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitt
 					msgC <- ytMsg
 				case err := <-messageChannel.youtubeEmitter.ErrorEmitter():
 					fmt.Printf("Error from youtube:%s\n", err.Error())
-					break
 				}
 
 			}

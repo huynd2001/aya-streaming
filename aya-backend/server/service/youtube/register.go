@@ -181,9 +181,9 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 	}()
 }
 
-func (register *youtubeRegister) Start(ytService *yt.Service) {
+func (register *youtubeRegister) SetYTService(ytService *yt.Service) {
 	register.ytService = ytService
-	register.apiCaller.Start(ytService)
+	register.apiCaller.SetYTService(ytService)
 }
 
 func (register *youtubeRegister) Stop() {

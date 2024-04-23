@@ -18,15 +18,12 @@ type liveChatApiCaller struct {
 }
 
 func newApiCaller(ytService *yt.Service) *liveChatApiCaller {
-	return &liveChatApiCaller{
+
+	apiCaller := liveChatApiCaller{
 		apiStopCallSig: make(chan bool),
 		requestCall:    make(chan liveChatAPIRequest),
 		ytService:      ytService,
 	}
-}
-
-func (apiCaller *liveChatApiCaller) Start(ytService *yt.Service) {
-	apiCaller.ytService = ytService
 
 	go func() {
 		nextApiCall := time.Now()
@@ -67,6 +64,12 @@ func (apiCaller *liveChatApiCaller) Start(ytService *yt.Service) {
 		}
 
 	}()
+
+	return &apiCaller
+}
+
+func (apiCaller *liveChatApiCaller) SetYTService(ytService *yt.Service) {
+	apiCaller.ytService = ytService
 }
 
 func (apiCaller *liveChatApiCaller) Stop() {
