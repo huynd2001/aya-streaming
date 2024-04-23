@@ -33,7 +33,7 @@ func (hub *DiscordResourceHub) GetSessionId(resourceInfo any) []string {
 	}
 	guildId := discordInfo.DiscordGuildId
 	channelId := discordInfo.DiscordChannelId
-	guildChannel := strings.Join([]string{guildId, channelId}, "/")
+	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)
 	if hub.guildChannel2Session[guildChannel] == nil {
 		return []string{}
 	}
@@ -119,7 +119,7 @@ func (hub *DiscordResourceHub) RegisterSessionResources(sessionId string, resour
 	}
 	newResources := make(map[string]bool)
 	for _, resource := range resources {
-		guildChannel := strings.Join([]string{resource.DiscordGuildId, resource.DiscordChannelId}, "/")
+		guildChannel := fmt.Sprintf("%s/%s", resource.DiscordGuildId, resource.DiscordChannelId)
 		newResources[guildChannel] = true
 	}
 	similarRs, removeRs, addRs := diffDiscord(oldResources, newResources)
@@ -128,13 +128,13 @@ func (hub *DiscordResourceHub) RegisterSessionResources(sessionId string, resour
 	}
 	for _, removeR := range removeRs {
 		red := color.New(color.FgRed).SprintfFunc()
-		fmt.Printf("Discord: %s->%s\n", sessionId, red("-%#v", removeRs))
+		fmt.Printf("Discord: %s->%s\n", sessionId, red("-- %#v", removeRs))
 		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
 	for _, addR := range addRs {
 		green := color.New(color.FgGreen).SprintfFunc()
-		fmt.Printf("Discord: %s->%s\n", sessionId, green("-%#v", addR))
+		fmt.Printf("Discord: %s->%s\n", sessionId, green("++ %#v", addR))
 		hub.emitter.Register(sessionId, addR)
 		hub.registerSession(sessionId, addR)
 	}
@@ -144,7 +144,7 @@ func (hub *DiscordResourceHub) registerSession(sessionId string, resourceInfo di
 
 	guildId := resourceInfo.DiscordGuildId
 	channelId := resourceInfo.DiscordChannelId
-	guildChannel := strings.Join([]string{guildId, channelId}, "/")
+	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)
 
 	if hub.session2GuildChannel[sessionId] == nil {
 		hub.session2GuildChannel[sessionId] = make(map[string]bool)
@@ -159,7 +159,7 @@ func (hub *DiscordResourceHub) registerSession(sessionId string, resourceInfo di
 func (hub *DiscordResourceHub) deregisterSession(sessionId string, resourceInfo discordsource.DiscordInfo) {
 	guildId := resourceInfo.DiscordGuildId
 	channelId := resourceInfo.DiscordChannelId
-	guildChannel := strings.Join([]string{guildId, channelId}, "/")
+	guildChannel := fmt.Sprintf("%s/%s", guildId, channelId)
 
 	if hub.session2GuildChannel[sessionId] != nil {
 		delete(hub.session2GuildChannel[sessionId], guildChannel)
