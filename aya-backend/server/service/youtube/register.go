@@ -3,10 +3,15 @@ package youtube_source
 import (
 	"aya-backend/server/service"
 	"fmt"
-	"github.com/fatih/color"
-	yt "google.golang.org/api/youtube/v3"
 	"sync"
 	"time"
+
+	"github.com/fatih/color"
+	yt "google.golang.org/api/youtube/v3"
+)
+
+const (
+	TIME_UNTIL_RETRY = 30 * time.Second
 )
 
 type youtubeRegister struct {
@@ -34,6 +39,7 @@ func (register *youtubeRegister) deregisterChannel(channelId string) {
 		return
 	}
 	register.channelKillSignal[channelId] <- true
+	close(register.channelKillSignal[channelId])
 	delete(register.channelKillSignal, channelId)
 	fmt.Printf("channel %s has been deregistered\n", channelId)
 }
@@ -108,8 +114,6 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 
 		color.Green("Got the live video for channel %s", channelId)
 
-		apiErrCh := make(chan error)
-		responseCh := make(chan *yt.LiveChatMessageListResponse)
 		var pageToken *string
 
 		for {
@@ -118,6 +122,8 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 			if pageToken != nil {
 				liveChatServiceCall = liveChatServiceCall.PageToken(*pageToken)
 			}
+			apiErrCh := make(chan error)
+			responseCh := make(chan *yt.LiveChatMessageListResponse)
 			liveChatApiRequest := liveChatAPIRequest{
 				requestCall: liveChatServiceCall,
 				responseCh:  responseCh,
@@ -127,17 +133,33 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 			register.apiCaller.Request(liveChatApiRequest)
 			select {
 			case <-stopSignals:
-				close(stopSignals)
 				stopDuringListening <- true
+				close(stopDuringListening)
 				color.Red("stop signal during the stream of %s, stop", channelId)
 				// wait for response from err and response before closing down
 				select {
-				case <-apiErrCh:
-				case <-responseCh:
+				case err := <-apiErrCh:
+					errCh <- err
+				case response := <-responseCh:
+					for _, item := range response.Items {
+						if item != nil && item.Snippet != nil {
+							publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
+							if err != nil {
+								publishedTime = time.Now()
+							}
+							msgChan <- service.MessageUpdate{
+								UpdateTime: publishedTime,
+								Update:     service.New,
+								Message:    ytParser.ParseMessage(item),
+								ExtraFields: YoutubeInfo{
+									YoutubeChannelId: channelId,
+								},
+							}
+						}
+					}
 				}
 				return
 			case err := <-apiErrCh:
-				close(apiErrCh)
 				fmt.Printf("Error during api calls: %v\n", err.Error())
 				errCh <- err
 				return
@@ -147,7 +169,6 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 					if item != nil && item.Snippet != nil {
 						publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
 						if err != nil {
-							fmt.Println("Error when parsing time in chat. Opt for current Time")
 							publishedTime = time.Now()
 						}
 						msgChan <- service.MessageUpdate{
@@ -170,11 +191,9 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 			select {
 			case err := <-errCh:
 				// sleep for a duration before a cool reset
-				sleepDuration := 1 * time.Minute
-				fmt.Printf("Error during processing channel %s: %s\nReseting in %s\n", channelId, err.Error(), sleepDuration)
-
+				fmt.Printf("Error during processing channel %s: %s\nReseting in %s\n", channelId, err.Error(), TIME_UNTIL_RETRY)
 				select {
-				case <-time.After(sleepDuration):
+				case <-time.After(TIME_UNTIL_RETRY):
 					go setupChannel()
 				case <-stopSignals:
 					register.Stop()
@@ -182,8 +201,6 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 				}
 			case <-stopDuringListening:
 				color.Red("Stop when listening for channel %s. Return", channelId)
-				close(stopDuringListening)
-				close(errCh)
 				return
 			}
 		}
@@ -200,8 +217,10 @@ func (register *youtubeRegister) SetYTService(ytService *yt.Service) {
 func (register *youtubeRegister) Stop() {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
-	for _, killSig := range register.channelKillSignal {
+	for channelId, killSig := range register.channelKillSignal {
 		killSig <- true
+		color.Red("Kill Signal sent to channel %s", channelId)
+		close(killSig)
 	}
 	register.apiCaller.Stop()
 }

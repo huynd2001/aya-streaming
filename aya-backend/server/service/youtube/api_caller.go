@@ -1,9 +1,10 @@
 package youtube_source
 
 import (
+	"time"
+
 	"github.com/fatih/color"
 	yt "google.golang.org/api/youtube/v3"
-	"time"
 )
 
 type liveChatAPIRequest struct {
@@ -35,14 +36,12 @@ func newApiCaller(ytService *yt.Service) *liveChatApiCaller {
 			select {
 			case <-apiCaller.apiStopCallSig:
 				color.Red("Kill api call")
-				close(apiCaller.apiStopCallSig)
 				close(apiCaller.requestCall)
 				return
 			case <-time.After(sleepDuration):
 				select {
 				case <-apiCaller.apiStopCallSig:
 					color.Red("Kill api call")
-					close(apiCaller.apiStopCallSig)
 					close(apiCaller.requestCall)
 					return
 				case liveChatCall := <-apiCaller.requestCall:
@@ -54,6 +53,8 @@ func newApiCaller(ytService *yt.Service) *liveChatApiCaller {
 						nextApiCall = time.Now().Add(time.Duration(response.PollingIntervalMillis) * time.Millisecond)
 						liveChatCall.responseCh <- response
 					}
+					close(liveChatCall.errCh)
+					close(liveChatCall.responseCh)
 				}
 			}
 

@@ -3,11 +3,12 @@ package auth
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"golang.org/x/oauth2"
-	"net/http"
 )
 
 type VerificationEvent struct {
@@ -85,6 +86,7 @@ func (workflow *Workflow) SetupAuth(
 			workflow.verified = true
 			workflow.authURL = nil
 			workflow.tokenSourceCh <- oauthConfig.TokenSource(context.Background(), oauth2Token)
+			close(workflow.tokenSourceCh)
 			break
 		}
 	}()
@@ -126,6 +128,7 @@ func (workflow *Workflow) SetUpRedirectAndCodeChallenge(
 			}
 
 			workflow.verificationCh <- verifyEvent
+			close(workflow.verificationCh)
 			writer.WriteHeader(http.StatusOK)
 			_, _ = writer.Write([]byte("Code and State has been sent to server. Check the log for more information"))
 			return
