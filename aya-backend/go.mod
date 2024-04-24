@@ -5,6 +5,7 @@ go 1.22.1
 require (
 	github.com/MicahParks/keyfunc/v3 v3.3.2
 	github.com/bwmarrin/discordgo v0.27.1
+	github.com/fatih/color v1.16.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
@@ -21,7 +22,6 @@ require (
 	cloud.google.com/go/compute v1.23.4 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/MicahParks/jwkset v0.5.17 // indirect
-	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

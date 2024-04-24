@@ -4,12 +4,13 @@ import (
 	models "aya-backend/db-models"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/gorilla/mux"
-	"gorm.io/gorm"
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
 type UserFilter struct {
