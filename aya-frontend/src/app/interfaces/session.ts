@@ -12,6 +12,11 @@ export interface SessionInfo {
   UserID: number;
 }
 
+export interface DisplaySessionInfo {
+  session_info: SessionInfo;
+  should_hidden: boolean;
+}
+
 export interface ResourceInfo {
   resourceType: string;
   resourceInfo: {

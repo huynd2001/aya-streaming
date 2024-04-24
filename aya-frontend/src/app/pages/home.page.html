@@ -36,14 +36,20 @@
   </mat-menu>
 </mat-toolbar>
 
-@if (sessionInfo) { @for (session of sessionInfo; track $index) {
+@if (displaySessionInfo) { @for (displaySession of displaySessionInfo; track
+$index) {
 <mat-card>
   <mat-card-header>
-    <p>Session ID: {{ session.ID }}</p>
+    <p>Session ID: {{ displaySession.session_info.ID }}</p>
   </mat-card-header>
+  @if (displaySession.should_hidden) {
+  <mat-card-content>
+    <p>(deleted)</p>
+  </mat-card-content>
+  } @else {
   <mat-card-content>
     <app-session-info-display
-      [displaySessionInfo]="session"
+      [displaySessionInfo]="displaySession"
     ></app-session-info-display>
   </mat-card-content>
   <mat-card-actions>
@@ -67,15 +73,16 @@
       mat-icon-button
       class="icon"
       aria-label="stream link"
-      (click)="copyURLToClipboard(session.UUID)"
+      (click)="copyURLToClipboard(displaySession.session_info.UUID)"
     >
       <mat-icon>link</mat-icon>
     </button>
     <mat-slide-toggle
-      [checked]="session.IsOn"
+      [checked]="displaySession.session_info.IsOn"
       (change)="switchSession($index, $event)"
     ></mat-slide-toggle>
   </mat-card-actions>
+  }
 </mat-card>
 <mat-divider></mat-divider>
 

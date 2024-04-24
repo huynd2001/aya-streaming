@@ -21,7 +21,11 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
 import { SessionInfoService } from '../services/session-info.service';
-import { SessionDialogInfo, SessionInfo } from '../interfaces/session';
+import {
+  SessionDialogInfo,
+  SessionInfo,
+  DisplaySessionInfo,
+} from '../interfaces/session';
 import {
   MatCard,
   MatCardActions,
@@ -68,7 +72,7 @@ export default class HomePage implements OnInit, OnDestroy {
   public isAuth: boolean = false;
   public userInfo: UserInfo | undefined;
   public isLoading: boolean = true;
-  public sessionInfo: SessionInfo[] | undefined;
+  public displaySessionInfo: DisplaySessionInfo[] | undefined;
 
   private isAuth$: Observable<boolean> = of(false);
   private userInfo$: Observable<UserInfo> = of({ ID: 0, Email: '' });
@@ -180,7 +184,14 @@ export default class HomePage implements OnInit, OnDestroy {
     this.sessionInfoSubscription.add(
       this.sessionInfo$.subscribe({
         next: (sessionsInfo) => {
-          this.sessionInfo = sessionsInfo;
+          this.displaySessionInfo = sessionsInfo.map(
+            (sessionInfo): DisplaySessionInfo => {
+              return {
+                session_info: sessionInfo,
+                should_hidden: false,
+              };
+            },
+          );
         },
         error: (err) => {
           console.error('Cannot retrieve session info from backend');
@@ -283,17 +294,19 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   openEditDialog(id: number) {
-    if (!this.sessionInfo) {
+    if (!this.displaySessionInfo) {
       return;
     }
-    if (id < 0 || id >= this.sessionInfo.length) {
+    if (id < 0 || id >= this.displaySessionInfo.length) {
       return;
     }
 
     const dialogRef = this.dialog.open(SessionDialogComponent, {
       data: {
-        id: this.sessionInfo[id].ID,
-        resources: JSON.parse(this.sessionInfo[id].Resources),
+        id: this.displaySessionInfo[id].session_info.ID,
+        resources: JSON.parse(
+          this.displaySessionInfo[id].session_info.Resources,
+        ),
       },
     });
 
@@ -320,6 +333,12 @@ export default class HomePage implements OnInit, OnDestroy {
                   duration: 3000,
                 },
               );
+              if (this.displaySessionInfo && value.data) {
+                this.displaySessionInfo[id] = {
+                  should_hidden: false,
+                  session_info: value.data,
+                };
+              }
             },
             error: (err) => {
               console.error(err);
@@ -337,14 +356,14 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   openDeleteDialog(id: number) {
-    if (!this.sessionInfo) {
+    if (!this.displaySessionInfo) {
       return;
     }
-    if (id < 0 || id >= this.sessionInfo.length) {
+    if (id < 0 || id >= this.displaySessionInfo.length) {
       return;
     }
     const dialogRef = this.dialog.open(YesNoDialogComponent);
-    let sessionId = this.sessionInfo[id].ID;
+    let sessionId = this.displaySessionInfo[id].session_info.ID;
     dialogRef.afterClosed().subscribe((userCollect) => {
       if (userCollect === true) {
         combineLatest([this.accessToken$, this.userInfo$])
@@ -367,6 +386,9 @@ export default class HomePage implements OnInit, OnDestroy {
                   duration: 3000,
                 },
               );
+              if (this.displaySessionInfo && value.data) {
+                this.displaySessionInfo[id].should_hidden = true;
+              }
             },
             error: (err) => {
               console.error(err);
@@ -384,16 +406,16 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   switchSession(id: number, event: MatSlideToggleChange) {
-    if (!this.sessionInfo) {
+    if (!this.displaySessionInfo) {
       return;
     }
-    if (id < 0 || id >= this.sessionInfo.length) {
+    if (id < 0 || id >= this.displaySessionInfo.length) {
       return;
     }
-    const sessionId = this.sessionInfo[id].ID;
+    const sessionId = this.displaySessionInfo[id].session_info.ID;
     const newSessionInfo: SessionDialogInfo = {
-      id: this.sessionInfo[id].ID,
-      resources: JSON.parse(this.sessionInfo[id].Resources),
+      id: this.displaySessionInfo[id].session_info.ID,
+      resources: JSON.parse(this.displaySessionInfo[id].session_info.Resources),
     };
     combineLatest([this.accessToken$, this.userInfo$])
       .pipe(
@@ -416,6 +438,12 @@ export default class HomePage implements OnInit, OnDestroy {
               duration: 3000,
             },
           );
+          if (this.displaySessionInfo && value.data) {
+            this.displaySessionInfo[id] = {
+              should_hidden: false,
+              session_info: value.data,
+            };
+          }
         },
         error: (err) => {
           console.error(err);
