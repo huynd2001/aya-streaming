@@ -1,6 +1,7 @@
 package youtube_source
 
 import (
+	"github.com/fatih/color"
 	yt "google.golang.org/api/youtube/v3"
 	"time"
 )
@@ -27,30 +28,25 @@ func newApiCaller(ytService *yt.Service) *liveChatApiCaller {
 
 	go func() {
 		nextApiCall := time.Now()
-		intervalWait := make(chan bool)
 
 		for {
-			go func() {
-				sleepDuration := time.Until(nextApiCall)
-				if sleepDuration > 0 {
-					time.Sleep(sleepDuration)
-				}
-				intervalWait <- true
-			}()
+			sleepDuration := time.Until(nextApiCall)
 
 			select {
 			case <-apiCaller.apiStopCallSig:
+				color.Red("Kill api call")
 				close(apiCaller.apiStopCallSig)
 				close(apiCaller.requestCall)
 				return
-			case <-intervalWait:
+			case <-time.After(sleepDuration):
 				select {
 				case <-apiCaller.apiStopCallSig:
+					color.Red("Kill api call")
 					close(apiCaller.apiStopCallSig)
 					close(apiCaller.requestCall)
 					return
 				case liveChatCall := <-apiCaller.requestCall:
-
+					color.Yellow("Got an api call")
 					response, err := liveChatCall.requestCall.Do()
 					if err != nil {
 						liveChatCall.errCh <- err

@@ -35,7 +35,7 @@ type YoutubeEmitter struct {
 }
 
 func (emitter *YoutubeEmitter) Register(subscriber string, resourceInfo any) {
-	ytInfo, ok := resourceInfo.(*YoutubeInfo)
+	ytInfo, ok := resourceInfo.(YoutubeInfo)
 	if !ok {
 		return
 	}
@@ -53,7 +53,7 @@ func (emitter *YoutubeEmitter) Register(subscriber string, resourceInfo any) {
 
 func (emitter *YoutubeEmitter) Deregister(subscriber string, resourceInfo any) {
 
-	ytInfo, ok := resourceInfo.(*YoutubeInfo)
+	ytInfo, ok := resourceInfo.(YoutubeInfo)
 	if !ok {
 		return
 	}
@@ -160,5 +160,6 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 		youtubeEmitter.register.SetYTService(ytService)
 	}()
 
+	fmt.Printf("New Youtube Emitter created!\n")
 	return &youtubeEmitter, nil
 }

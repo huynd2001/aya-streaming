@@ -54,7 +54,7 @@ func (infoDB *InfoDB) GetResourcesInfo(registeredSessions map[string]bool, lastU
 		allSessions = append(allSessions, sessionId)
 	}
 	var sessions []models.GORMSession
-	result := infoDB.db.Where("uuid IN ?", notPopSessions).Or("uuid IN ? AND updated_at != NULL AND updated_at >= ?", allSessions, lastUpdated).Find(&sessions)
+	result := infoDB.db.Where("uuid IN ?", notPopSessions).Or("uuid IN ? AND updated_at is not NULL AND updated_at >= ?", allSessions, lastUpdated).Find(&sessions)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return map[string][]models.Resource{}
 	} else if result.Error != nil {
@@ -69,6 +69,7 @@ func (infoDB *InfoDB) GetResourcesInfo(registeredSessions map[string]bool, lastU
 			session2Resources[sessionUUID] = []models.Resource{}
 			continue
 		}
+		fmt.Printf("Session %s is on, start reading the resources\n", sessionUUID)
 		var resources []models.Resource
 		err := json.Unmarshal([]byte(session.Resources), &resources)
 		if err != nil {

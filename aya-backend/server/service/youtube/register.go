@@ -3,6 +3,7 @@ package youtube_source
 import (
 	"aya-backend/server/service"
 	"fmt"
+	"github.com/fatih/color"
 	yt "google.golang.org/api/youtube/v3"
 	"sync"
 	"time"
@@ -27,11 +28,6 @@ func newYoutubeRegister(ytService *yt.Service) *youtubeRegister {
 func (register *youtubeRegister) deregisterChannel(channelId string) {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
-	if register.ytService == nil {
-		// Do nothing
-		fmt.Printf("ytService not set up, skipping deregistering %s\n", channelId)
-		return
-	}
 	if register.channelKillSignal[channelId] == nil {
 		// Don't have to do anything
 		fmt.Printf("channel %s have not been registered, doing nothing\n", channelId)
@@ -39,6 +35,7 @@ func (register *youtubeRegister) deregisterChannel(channelId string) {
 	}
 	register.channelKillSignal[channelId] <- true
 	delete(register.channelKillSignal, channelId)
+	fmt.Printf("channel %s has been deregistered\n", channelId)
 }
 
 func (register *youtubeRegister) registerChannel(channelId string, msgChan chan service.MessageUpdate) {
@@ -66,6 +63,9 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 	ytParser := YoutubeMessageParser{}
 
 	setupChannel := func() {
+
+		color.Yellow("setup channel %s\n", channelId)
+
 		searchRes, err := register.ytService.Search.
 			List([]string{"id"}).
 			ChannelId(channelId).
@@ -106,6 +106,8 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 			return
 		}
 
+		color.Green("Got the live video for channel %s", channelId)
+
 		apiErrCh := make(chan error)
 		responseCh := make(chan *yt.LiveChatMessageListResponse)
 		var pageToken *string
@@ -121,11 +123,18 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 				responseCh:  responseCh,
 				errCh:       apiErrCh,
 			}
+			color.Green("Calling liveChatApi")
 			register.apiCaller.Request(liveChatApiRequest)
 			select {
 			case <-stopSignals:
 				close(stopSignals)
 				stopDuringListening <- true
+				color.Red("stop signal during the stream of %s, stop", channelId)
+				// wait for response from err and response before closing down
+				select {
+				case <-apiErrCh:
+				case <-responseCh:
+				}
 				return
 			case err := <-apiErrCh:
 				close(apiErrCh)
@@ -141,7 +150,6 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 							fmt.Println("Error when parsing time in chat. Opt for current Time")
 							publishedTime = time.Now()
 						}
-						fmt.Println(publishedTime.Format(time.RFC822Z))
 						msgChan <- service.MessageUpdate{
 							UpdateTime: publishedTime,
 							Update:     service.New,
@@ -173,12 +181,15 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 					return
 				}
 			case <-stopDuringListening:
+				color.Red("Stop when listening for channel %s. Return", channelId)
 				close(stopDuringListening)
 				close(errCh)
 				return
 			}
 		}
 	}()
+
+	fmt.Printf("Finish register channel %s\n", channelId)
 }
 
 func (register *youtubeRegister) SetYTService(ytService *yt.Service) {
