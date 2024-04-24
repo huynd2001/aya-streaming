@@ -75,7 +75,11 @@ export default class HomePage implements OnInit, OnDestroy {
   public displaySessionInfo: DisplaySessionInfo[] | undefined;
 
   private isAuth$: Observable<boolean> = of(false);
-  private userInfo$: Observable<UserInfo> = of({ ID: 0, Email: '' });
+  private userInfo$: Observable<UserInfo> = of({
+    ID: 0,
+    Email: '',
+    Sessions: [],
+  });
   private isLoading$: Observable<boolean> = of(true);
   private sessionInfo$: Observable<SessionInfo[]> = of([]);
   private accessToken$: Observable<string> = of('');
@@ -151,21 +155,9 @@ export default class HomePage implements OnInit, OnDestroy {
       shareReplay(1),
     );
 
-    this.sessionInfo$ = combineLatest([this.userInfo$, this.accessToken$]).pipe(
-      switchMap(([userInfo, accessToken]) => {
-        return this.sessionInfoService.getAllSessions$(
-          accessToken,
-          userInfo.ID,
-        );
-      }),
-      map(({ data, err }) => {
-        if (err) {
-          throw new Error(err);
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('No data found');
-        }
+    this.sessionInfo$ = this.userInfo$.pipe(
+      map((userInfo) => {
+        return userInfo.Sessions;
       }),
       shareReplay(1),
     );

@@ -79,4 +79,27 @@ func main() {
 	}
 
 	fmt.Printf("Migrate database successfully! Have fun developing.\n")
+
+	result := db.
+		Model(&model.GORMUser{}).
+		Preload("Sessions").
+		Where(&model.GORMUser{Email: "ndhuy01@gmail.com"}, "email").
+		First(&user)
+	if result.Error != nil {
+		fmt.Printf("Error when getting user info: %s\n", result.Error.Error())
+	} else {
+		fmt.Printf("User info: %#v\n", user)
+	}
+
+	result = db.
+		Model(&model.GORMSession{}).
+		Preload("User").
+		Where(&model.GORMSession{Model: gorm.Model{ID: 18}}).
+		First(&session)
+
+	if result.Error != nil {
+		fmt.Printf("Error when getting session info: %s\n", result.Error.Error())
+	} else {
+		fmt.Printf("Session info: %#v\n", session)
+	}
 }

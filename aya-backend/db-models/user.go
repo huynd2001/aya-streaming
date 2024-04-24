@@ -4,6 +4,7 @@ import "gorm.io/gorm"
 
 type GORMUser struct {
 	gorm.Model
-	Username string `gorm:"unique"`
-	Email    string `gorm:"unique"`
+	Username string        `gorm:"unique"`
+	Email    string        `gorm:"unique"`
+	Sessions []GORMSession `gorm:"foreignKey:UserID"`
 }

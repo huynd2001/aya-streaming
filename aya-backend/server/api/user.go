@@ -102,7 +102,11 @@ func (dbApiServer *DBApiServer) NewUserApi(r *mux.Router) {
 			userQuery, args := extractUserFilter(userFilter)
 			var user models.GORMUser
 
-			result := dbApiServer.db.Where(&userQuery, args).First(&user)
+			result := dbApiServer.db.
+				Model(&models.GORMUser{}).
+				Preload("Sessions").
+				Where(&userQuery, args).
+				First(&user)
 
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				writer.Header().Set("Content-Type", "application/json")
