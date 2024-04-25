@@ -25,8 +25,6 @@ type MessageHub struct {
 
 	infoDB *db.InfoDB
 
-	stopSignal chan bool
-
 	registeredSessions map[string]bool
 }
 
@@ -36,29 +34,24 @@ func NewMessageHub(emitter *composed.MessageEmitter, gormDB *gorm.DB) *MessageHu
 		discordHub:         NewDiscordResourceHub(emitter.GetDiscordEmitter()),
 		youtubeHub:         NewYoutubeResourceHub(emitter.GetYoutubeEmitter()),
 		infoDB:             db.NewInfoDB(gormDB),
-		stopSignal:         make(chan bool),
 		registeredSessions: make(map[string]bool),
 	}
 
 	go func() {
 		lastUpdateTime := time.Now()
 		for {
-			select {
-			case <-time.After(DATA_RETRIEVAL_INTERVAL):
-				newTime := time.Now()
-				resourceInfoMap := msgHub.infoDB.GetResourcesInfo(msgHub.registeredSessions, lastUpdateTime)
-				if len(resourceInfoMap) > 0 {
-					fmt.Println("Changes detected:")
-				}
-				for sessionId, resources := range resourceInfoMap {
-					fmt.Printf("Update session with Id %s\n", sessionId)
-					fmt.Printf("New resources info: %s\n", resources)
-					msgHub.RegisterSessionResources(sessionId, resources)
-				}
-				lastUpdateTime = newTime
-			case <-msgHub.stopSignal:
-				return
+			<-time.After(DATA_RETRIEVAL_INTERVAL)
+			newTime := time.Now()
+			resourceInfoMap := msgHub.infoDB.GetResourcesInfo(msgHub.registeredSessions, lastUpdateTime)
+			if len(resourceInfoMap) > 0 {
+				fmt.Println("Changes detected:")
 			}
+			for sessionId, resources := range resourceInfoMap {
+				fmt.Printf("Update session with Id %s\n", sessionId)
+				fmt.Printf("New resources info: %s\n", resources)
+				msgHub.RegisterSessionResources(sessionId, resources)
+			}
+			lastUpdateTime = newTime
 		}
 	}()
 
@@ -75,9 +68,17 @@ func (m *MessageHub) GetSessionId(resourceInfo any) []string {
 	}
 	switch hubResourceInfo.ResourceType {
 	case service.Discord:
-		return m.discordHub.GetSessionId(hubResourceInfo.ResourceInfo)
+		if m.discordHub != nil {
+			return m.discordHub.GetSessionId(hubResourceInfo.ResourceInfo)
+		} else {
+			return []string{}
+		}
 	case service.Youtube:
-		return m.youtubeHub.GetSessionId(hubResourceInfo.ResourceInfo)
+		if m.youtubeHub != nil {
+			return m.youtubeHub.GetSessionId(hubResourceInfo.ResourceInfo)
+		} else {
+			return []string{}
+		}
 	default:
 		return []string{}
 	}
@@ -109,8 +110,12 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 		default:
 		}
 	}
-	m.discordHub.RegisterSessionResources(sessionId, discordResources)
-	m.youtubeHub.RegisterSessionResources(sessionId, youtubeResources)
+	if m.discordHub != nil {
+		m.discordHub.RegisterSessionResources(sessionId, discordResources)
+	}
+	if m.youtubeHub != nil {
+		m.youtubeHub.RegisterSessionResources(sessionId, youtubeResources)
+	}
 	m.registeredSessions[sessionId] = true
 
 }
@@ -119,6 +124,10 @@ func (m *MessageHub) AddSession(sessionId string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.registeredSessions[sessionId] = false
-	m.discordHub.AddSession(sessionId)
-	m.youtubeHub.AddSession(sessionId)
+	if m.discordHub != nil {
+		m.discordHub.AddSession(sessionId)
+	}
+	if m.youtubeHub != nil {
+		m.youtubeHub.AddSession(sessionId)
+	}
 }
