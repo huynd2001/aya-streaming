@@ -10,7 +10,6 @@ export interface SessionInfo {
   UUID: string;
   Resources: string;
   IsOn: boolean;
-  IsDelete: boolean;
   UserID: number;
 }
 
