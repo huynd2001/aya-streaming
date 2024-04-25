@@ -1,31 +1,27 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnDestroy,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatIcon, MatIconRegistry } from '@angular/material/icon';
 import { MatButton, MatIconButton } from '@angular/material/button';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatList, MatListItem } from '@angular/material/list';
-import {
-  combineLatest,
-  map,
-  Observable,
-  of,
-  shareReplay,
-  Subscription,
-  switchMap,
-  throwError,
-} from 'rxjs';
+import { map, Subscription } from 'rxjs';
 import { UserInfoService } from '../services/user-info.service';
 import { UserInfo } from '../interfaces/user';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
 import { SessionInfoService } from '../services/session-info.service';
-import {
-  SessionDialogInfo,
-  SessionInfo,
-  DisplaySessionInfo,
-} from '../interfaces/session';
+import { SessionDialogInfo, DisplaySessionInfo } from '../interfaces/session';
 import {
   MatCard,
   MatCardActions,
@@ -69,25 +65,26 @@ import { environment } from '../../environments/environment';
   styleUrl: 'home.page.css',
 })
 export default class HomePage implements OnInit, OnDestroy {
-  public isAuth: boolean = false;
-  public userInfo: UserInfo | undefined;
-  public isLoading: boolean = true;
-  public displaySessionInfo: DisplaySessionInfo[] | undefined;
+  private loginResponse: WritableSignal<LoginResponse | undefined> =
+    signal(undefined);
+  public isAuth: Signal<boolean> = computed(
+    () => this.loginResponse()?.isAuthenticated || false,
+  );
+  private accessToken: WritableSignal<string> = signal('');
 
-  private isAuth$: Observable<boolean> = of(false);
-  private userInfo$: Observable<UserInfo> = of({
-    ID: 0,
+  public userInfo: WritableSignal<UserInfo> = signal({
+    ID: -1,
     Email: '',
     Sessions: [],
   });
-  private isLoading$: Observable<boolean> = of(true);
-  private sessionInfo$: Observable<SessionInfo[]> = of([]);
-  private accessToken$: Observable<string> = of('');
+  public displaySessionInfo: WritableSignal<DisplaySessionInfo[]> = signal([]);
 
-  private authSubscription: Subscription = new Subscription();
   private userInfoSubscription: Subscription = new Subscription();
-  private isLoadingSubscription: Subscription = new Subscription();
-  private sessionInfoSubscription: Subscription = new Subscription();
+  private loginAttemptSubscription: Subscription = new Subscription();
+  private accessTokenSubscription: Subscription = new Subscription();
+  private updateDialogSubscription: Subscription = new Subscription();
+  private deleteDialogSubscription: Subscription = new Subscription();
+  private newDialogSubscription: Subscription = new Subscription();
 
   private readonly oidcSecurityService = inject(OidcSecurityService);
   private readonly userInfoService = inject(UserInfoService);
@@ -95,7 +92,6 @@ export default class HomePage implements OnInit, OnDestroy {
   private readonly matIconRegistry = inject(MatIconRegistry);
   private readonly domSanitizer = inject(DomSanitizer);
   private readonly dialog = inject(MatDialog);
-  private readonly router = injectRouter();
 
   constructor(
     private _snackBar: MatSnackBar,
@@ -115,114 +111,38 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    let loginAttempt$ = this.oidcSecurityService
-      .checkAuth()
-      .pipe(shareReplay(1));
-
-    this.userInfo$ = loginAttempt$.pipe(
-      switchMap((loginResponse) => {
-        if (loginResponse.userData && loginResponse.accessToken) {
-          let email = loginResponse.userData['email'];
-          return this.userInfoService.getUserInfo$(
-            loginResponse.accessToken,
-            email,
-          );
-        } else {
-          return throwError(
-            () => new Error('No user data yet. Please log in!'),
-          );
-        }
-      }),
-      map(({ data, err }) => {
-        if (err) {
-          throw new Error(err);
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('No data found');
-        }
-      }),
-      shareReplay(1),
-    );
-
-    this.isAuth$ = loginAttempt$.pipe(
-      map((loginAttempt) => loginAttempt.isAuthenticated),
-      shareReplay(1),
-    );
-
-    this.accessToken$ = loginAttempt$.pipe(
-      map((loginAttempt) => loginAttempt.accessToken),
-      shareReplay(1),
-    );
-
-    this.sessionInfo$ = this.userInfo$.pipe(
-      map((userInfo) => {
-        return userInfo.Sessions;
-      }),
-      shareReplay(1),
-    );
-
-    this.isLoading$ = combineLatest([
-      loginAttempt$,
-      this.userInfo$,
-      this.sessionInfo$,
-    ]).pipe(
-      map(([loginAttempt, userInfo, sessionsInfo]) => {
-        return false;
-      }),
-      shareReplay(1),
-    );
-
-    this.sessionInfoSubscription.add(
-      this.sessionInfo$.subscribe({
-        next: (sessionsInfo) => {
-          this.displaySessionInfo = sessionsInfo.map(
-            (sessionInfo): DisplaySessionInfo => {
-              return {
-                session_info: sessionInfo,
-                should_hidden: false,
-              };
-            },
-          );
-        },
-        error: (err) => {
-          console.error('Cannot retrieve session info from backend');
-          console.error(err);
-        },
+    this.loginAttemptSubscription.add(
+      this.oidcSecurityService.checkAuth().subscribe((loginResponse) => {
+        this.loginResponse.set(loginResponse);
+        let email = loginResponse.userData['email'];
+        this.userInfoSubscription.add(
+          this.userInfoService
+            .getUserInfo$(loginResponse.accessToken, email)
+            .subscribe(({ data, err }) => {
+              if (err) {
+                console.error(err);
+                return;
+              } else if (!data) {
+                console.error('cannot parse data');
+              } else {
+                this.userInfo.set(data);
+                this.displaySessionInfo.set(
+                  data.Sessions.map((sessionInfo): DisplaySessionInfo => {
+                    return {
+                      session_info: signal(sessionInfo),
+                      should_hidden: false,
+                    };
+                  }),
+                );
+              }
+            }),
+        );
       }),
     );
 
-    this.userInfoSubscription.add(
-      this.userInfo$.subscribe({
-        next: (userInfo) => {
-          this.userInfo = userInfo;
-        },
-        error: (err) => {
-          console.error('Cannot retrieve user info from backend');
-          console.error(err);
-        },
-      }),
-    );
-
-    this.authSubscription.add(
-      this.isAuth$.subscribe({
-        next: (isAuth) => {
-          this.isAuth = isAuth;
-        },
-        error: (err) => {
-          console.error(err);
-        },
-      }),
-    );
-
-    this.isLoadingSubscription.add(
-      this.isLoading$.subscribe({
-        next: (isLoading) => {
-          this.isLoading = isLoading;
-        },
-        error: (err) => {
-          console.log(err);
-        },
+    this.accessTokenSubscription.add(
+      this.oidcSecurityService.getAccessToken().subscribe((accessToken) => {
+        this.accessToken.set(accessToken);
       }),
     );
   }
@@ -238,217 +158,247 @@ export default class HomePage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.authSubscription.unsubscribe();
     this.userInfoSubscription.unsubscribe();
-    this.isLoadingSubscription.unsubscribe();
-    this.sessionInfoSubscription.unsubscribe();
+    this.loginAttemptSubscription.unsubscribe();
+    this.updateDialogSubscription.unsubscribe();
+    this.deleteDialogSubscription.unsubscribe();
+    this.newDialogSubscription.unsubscribe();
   }
 
   openDialog() {
     const dialogRef = this.dialog.open(SessionDialogComponent);
     dialogRef.afterClosed().subscribe((sessionInfoDialog) => {
       if (sessionInfoDialog) {
-        combineLatest([this.accessToken$, this.userInfo$])
-          .pipe(
-            switchMap(([accessToken, userInfo]) => {
-              this._snackBar.open('Submitting...', 'Dismiss');
-              return this.sessionInfoService.newSession$(
-                accessToken,
-                userInfo.ID,
-                sessionInfoDialog,
-              );
+        this.newDialogSubscription.add(
+          this.sessionInfoService
+            .newSession$(
+              this.accessToken(),
+              this.userInfo().ID,
+              sessionInfoDialog,
+            )
+            .pipe(
+              map(({ data, err }) => {
+                if (err) {
+                  throw err;
+                } else if (!data) {
+                  throw Error('cannot read data');
+                } else {
+                  return data;
+                }
+              }),
+            )
+            .subscribe({
+              next: (newSessionInfo) => {
+                const sessionId = newSessionInfo?.ID;
+                this._snackBar.open(
+                  `Create Session ${sessionId} Success!`,
+                  'Dismiss',
+                  {
+                    duration: 3000,
+                  },
+                );
+                this.displaySessionInfo.update((displaySessionInfos) => [
+                  ...displaySessionInfos,
+                  {
+                    session_info: signal(newSessionInfo),
+                    should_hidden: false,
+                  },
+                ]);
+              },
+              error: (err) => {
+                console.error(err);
+              },
             }),
-            map((data) => {
-              if (data.err) {
-                throw data.err;
-              } else {
-                return data.data;
-              }
-            }),
-          )
-          .subscribe({
-            next: (value) => {
-              const sessionId = value?.ID;
-              this._snackBar.open(
-                `Create Session ${sessionId} Success!`,
-                'Dismiss',
-                {
-                  duration: 3000,
-                },
-              );
-            },
-            error: (err) => {
-              console.error(err);
-            },
-          });
+        );
       }
     });
   }
 
   openEditDialog(id: number) {
-    if (!this.displaySessionInfo) {
+    if (!this.displaySessionInfo()) {
       return;
     }
-    if (id < 0 || id >= this.displaySessionInfo.length) {
+    if (id < 0 || id >= this.displaySessionInfo().length) {
       return;
     }
 
+    const sessionId = this.displaySessionInfo()[id].session_info().ID;
+
     const dialogRef = this.dialog.open(SessionDialogComponent, {
       data: {
-        id: this.displaySessionInfo[id].session_info.ID,
+        id: sessionId,
         resources: JSON.parse(
-          this.displaySessionInfo[id].session_info.Resources,
+          this.displaySessionInfo()[id].session_info().Resources,
         ),
       },
     });
 
     dialogRef.afterClosed().subscribe((sessionInfoDialog) => {
       if (sessionInfoDialog) {
-        const sessionId = sessionInfoDialog.id;
-        combineLatest([this.accessToken$, this.userInfo$])
-          .pipe(
-            switchMap(([accessToken, userInfo]) => {
-              this._snackBar.open('Loading...', 'Dismiss');
-              return this.sessionInfoService.updateSession$(
-                accessToken,
-                userInfo.ID,
-                sessionInfoDialog,
-              );
+        this._snackBar.open('Loading...', 'Dismiss');
+        this.updateDialogSubscription.add(
+          this.sessionInfoService
+            .updateSession$(
+              this.accessToken(),
+              this.userInfo().ID,
+              sessionInfoDialog,
+            )
+            .pipe(
+              map(({ data, err }) => {
+                if (err) {
+                  throw err;
+                } else if (!data) {
+                  throw Error('cannot read data');
+                } else {
+                  return data;
+                }
+              }),
+            )
+            .subscribe({
+              next: (updatedSessionInfo) => {
+                this._snackBar.open(
+                  `Update Session ${sessionId} Success!`,
+                  'Dismiss',
+                  {
+                    duration: 3000,
+                  },
+                );
+                this.displaySessionInfo()[id].session_info.set(
+                  updatedSessionInfo,
+                );
+              },
+              error: (err) => {
+                console.error(err);
+                this._snackBar.open(
+                  `Update Session ${sessionId} Failed!`,
+                  'Dismiss',
+                  {
+                    duration: 3000,
+                  },
+                );
+              },
             }),
-          )
-          .subscribe({
-            next: (value) => {
-              this._snackBar.open(
-                `Update Session ${sessionId} Success!`,
-                'Dismiss',
-                {
-                  duration: 3000,
-                },
-              );
-              if (this.displaySessionInfo && value.data) {
-                this.displaySessionInfo[id] = {
-                  should_hidden: false,
-                  session_info: value.data,
-                };
-              }
-            },
-            error: (err) => {
-              console.error(err);
-              this._snackBar.open(
-                `Update Session ${sessionId} Failed!`,
-                'Dismiss',
-                {
-                  duration: 3000,
-                },
-              );
-            },
-          });
+        );
       }
     });
   }
 
   openDeleteDialog(id: number) {
-    if (!this.displaySessionInfo) {
+    if (!this.displaySessionInfo()) {
       return;
     }
-    if (id < 0 || id >= this.displaySessionInfo.length) {
+    if (id < 0 || id >= this.displaySessionInfo().length) {
       return;
     }
+
+    const sessionId = this.displaySessionInfo()[id].session_info().ID;
     const dialogRef = this.dialog.open(YesNoDialogComponent);
-    let sessionId = this.displaySessionInfo[id].session_info.ID;
+
     dialogRef.afterClosed().subscribe((userCollect) => {
       if (userCollect === true) {
-        combineLatest([this.accessToken$, this.userInfo$])
-          .pipe(
-            switchMap(([accessToken, userInfo]) => {
-              this._snackBar.open('Loading...', 'Dismiss');
-              return this.sessionInfoService.deleteSession$(
-                accessToken,
-                userInfo.ID,
-                sessionId,
-              );
+        this._snackBar.open('Loading...', 'Dismiss');
+        this.deleteDialogSubscription.add(
+          this.sessionInfoService
+            .deleteSession$(this.accessToken(), this.userInfo().ID, sessionId)
+            .pipe(
+              map(({ data, err }) => {
+                if (err) {
+                  throw err;
+                } else if (!data) {
+                  throw Error('cannot read data');
+                } else {
+                  return data;
+                }
+              }),
+            )
+            .subscribe({
+              next: (deletedSession) => {
+                this._snackBar.open(
+                  `Delete Session ${sessionId} Success!`,
+                  'Dismiss',
+                  {
+                    duration: 3000,
+                  },
+                );
+                const displaySessionInfos = this.displaySessionInfo();
+                displaySessionInfos[id] = {
+                  ...displaySessionInfos[id],
+                  should_hidden: true,
+                };
+                this.displaySessionInfo.update((_) => [...displaySessionInfos]);
+              },
+              error: (err) => {
+                console.error(err);
+                this._snackBar.open(
+                  `Delete Session ${sessionId} Failed!`,
+                  'Dismiss',
+                  {
+                    duration: 3000,
+                  },
+                );
+              },
             }),
-          )
-          .subscribe({
-            next: (value) => {
-              this._snackBar.open(
-                `Delete Session ${sessionId} Success!`,
-                'Dismiss',
-                {
-                  duration: 3000,
-                },
-              );
-              if (this.displaySessionInfo && value.data) {
-                this.displaySessionInfo[id].should_hidden = true;
-              }
-            },
-            error: (err) => {
-              console.error(err);
-              this._snackBar.open(
-                `Delete Session ${sessionId} Failed!`,
-                'Dismiss',
-                {
-                  duration: 3000,
-                },
-              );
-            },
-          });
+        );
       }
     });
   }
 
   switchSession(id: number, event: MatSlideToggleChange) {
-    if (!this.displaySessionInfo) {
+    if (!this.displaySessionInfo()) {
       return;
     }
-    if (id < 0 || id >= this.displaySessionInfo.length) {
+    if (id < 0 || id >= this.displaySessionInfo().length) {
       return;
     }
-    const sessionId = this.displaySessionInfo[id].session_info.ID;
+    const sessionId = this.displaySessionInfo()[id].session_info().ID;
     const newSessionInfo: SessionDialogInfo = {
-      id: this.displaySessionInfo[id].session_info.ID,
-      resources: JSON.parse(this.displaySessionInfo[id].session_info.Resources),
+      id: sessionId,
+      resources: JSON.parse(
+        this.displaySessionInfo()[id].session_info().Resources,
+      ),
     };
-    combineLatest([this.accessToken$, this.userInfo$])
-      .pipe(
-        switchMap(([accessToken, userInfo]) => {
-          this._snackBar.open('Loading...', 'Dismiss');
-          return this.sessionInfoService.updateSession$(
-            accessToken,
-            userInfo.ID,
-            newSessionInfo,
-            event.checked,
-          );
+    this._snackBar.open('Loading...', 'Dismiss');
+    this.updateDialogSubscription.add(
+      this.sessionInfoService
+        .updateSession$(
+          this.accessToken(),
+          this.userInfo().ID,
+          newSessionInfo,
+          event.checked,
+        )
+        .pipe(
+          map(({ data, err }) => {
+            if (err) {
+              throw err;
+            } else if (!data) {
+              throw Error('cannot read data');
+            } else {
+              return data;
+            }
+          }),
+        )
+        .subscribe({
+          next: (updatedSessionInfo) => {
+            this._snackBar.open(
+              `Update Session ${sessionId} Success!`,
+              'Dismiss',
+              {
+                duration: 3000,
+              },
+            );
+            this.displaySessionInfo()[id].session_info.set(updatedSessionInfo);
+          },
+          error: (err) => {
+            console.error(err);
+            this._snackBar.open(
+              `Update Session ${sessionId} Failed!`,
+              'Dismiss',
+              {
+                duration: 3000,
+              },
+            );
+          },
         }),
-      )
-      .subscribe({
-        next: (value) => {
-          this._snackBar.open(
-            `Update Session ${sessionId} Success!`,
-            'Dismiss',
-            {
-              duration: 3000,
-            },
-          );
-          if (this.displaySessionInfo && value.data) {
-            this.displaySessionInfo[id] = {
-              should_hidden: false,
-              session_info: value.data,
-            };
-          }
-        },
-        error: (err) => {
-          console.error(err);
-          this._snackBar.open(
-            `Update Session ${sessionId} Failed!`,
-            'Dismiss',
-            {
-              duration: 3000,
-            },
-          );
-        },
-      });
+    );
   }
-
-  protected readonly open = open;
 }

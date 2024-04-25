@@ -1,4 +1,12 @@
-import { Component, inject, Input, OnInit } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  Input,
+  OnInit,
+  Signal,
+  WritableSignal,
+} from '@angular/core';
 import {
   ResourceInfo,
   SessionInfo,
@@ -27,26 +35,11 @@ import { DomSanitizer } from '@angular/platform-browser';
   styleUrl: './session-info-display.component.css',
 })
 export class SessionInfoDisplayComponent implements OnInit {
-  @Input() displaySessionInfo: DisplaySessionInfo | undefined;
-  public resources: ResourceInfo[] = [];
-
-  private readonly matIconRegistry = inject(MatIconRegistry);
-  private readonly domSanitizer = inject(DomSanitizer);
-
-  validateResources(resources: any): resources is ResourceInfo[] {
-    return Array.isArray(resources);
-  }
-
-  setResources() {
-    if (this.displaySessionInfo === undefined) {
-      this.resources = [];
-      return;
-    }
-    const resourceParsed = JSON.parse(
-      this.displaySessionInfo.session_info.Resources,
-    );
+  @Input() sessionInfo!: WritableSignal<SessionInfo>;
+  public resources: Signal<ResourceInfo[]> = computed(() => {
+    const resourceParsed = JSON.parse(this.sessionInfo().Resources);
     if (this.validateResources(resourceParsed)) {
-      this.resources = resourceParsed.map((resource) => {
+      return resourceParsed.map((resource) => {
         return {
           resourceType: resource?.resourceType || 'discord',
           resourceInfo: {
@@ -56,10 +49,16 @@ export class SessionInfoDisplayComponent implements OnInit {
           },
         };
       });
-      return;
     } else {
-      this.resources = [];
+      return [];
     }
+  });
+
+  private readonly matIconRegistry = inject(MatIconRegistry);
+  private readonly domSanitizer = inject(DomSanitizer);
+
+  validateResources(resources: any): resources is ResourceInfo[] {
+    return Array.isArray(resources);
   }
 
   protected readonly JSON = JSON;
@@ -73,6 +72,5 @@ export class SessionInfoDisplayComponent implements OnInit {
       `youtube_logo`,
       this.domSanitizer.bypassSecurityTrustResourceUrl('/youtube.svg'),
     );
-    this.setResources();
   }
 }

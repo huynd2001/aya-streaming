@@ -19,9 +19,9 @@
   </button>
   <mat-menu #loginMenu="matMenu">
     <mat-list>
-      @if (isAuth) {
+      @if (isAuth()) {
       <mat-list-item>
-        <span>User Id: {{ userInfo?.ID }} Logged in!</span>
+        <span>User Id: {{ userInfo()?.ID }} Logged in!</span>
       </mat-list-item>
 
       <mat-list-item>
@@ -36,11 +36,10 @@
   </mat-menu>
 </mat-toolbar>
 
-@if (displaySessionInfo) { @for (displaySession of displaySessionInfo; track
-$index) {
+@for (displaySession of displaySessionInfo(); track $index) {
 <mat-card>
   <mat-card-header>
-    <p>Session ID: {{ displaySession.session_info.ID }}</p>
+    <p>Session ID: {{ displaySession.session_info().ID }}</p>
   </mat-card-header>
   @if (displaySession.should_hidden) {
   <mat-card-content>
@@ -49,7 +48,7 @@ $index) {
   } @else {
   <mat-card-content>
     <app-session-info-display
-      [displaySessionInfo]="displaySession"
+      [sessionInfo]="displaySession.session_info"
     ></app-session-info-display>
   </mat-card-content>
   <mat-card-actions>
@@ -73,17 +72,16 @@ $index) {
       mat-icon-button
       class="icon"
       aria-label="stream link"
-      (click)="copyURLToClipboard(displaySession.session_info.UUID)"
+      (click)="copyURLToClipboard(displaySession.session_info().UUID)"
     >
       <mat-icon>link</mat-icon>
     </button>
     <mat-slide-toggle
-      [checked]="displaySession.session_info.IsOn"
+      [checked]="displaySession.session_info().IsOn"
       (change)="switchSession($index, $event)"
     ></mat-slide-toggle>
   </mat-card-actions>
   }
 </mat-card>
 <mat-divider></mat-divider>
-
-} }
+}

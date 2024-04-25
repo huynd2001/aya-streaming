@@ -1,3 +1,5 @@
+import { WritableSignal } from '@angular/core';
+
 export interface SessionDialogInfo {
   id?: number;
   resources: ResourceInfo[];
@@ -13,8 +15,8 @@ export interface SessionInfo {
 }
 
 export interface DisplaySessionInfo {
-  session_info: SessionInfo;
   should_hidden: boolean;
+  session_info: WritableSignal<SessionInfo>;
 }
 
 export interface ResourceInfo {
