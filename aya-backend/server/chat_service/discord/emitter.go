@@ -1,16 +1,16 @@
 package discord_source
 
 import (
-	"aya-backend/server/service"
+	"aya-backend/server/chat_service"
 	"fmt"
 	dg "github.com/bwmarrin/discordgo"
 	"sync"
 )
 
 type DiscordEmitter struct {
-	service.ChatEmitter
+	chat_service.ChatEmitter
 	mutex         sync.Mutex
-	updateEmitter chan service.MessageUpdate
+	updateEmitter chan chat_service.MessageUpdate
 	discordClient *dg.Session
 	register      *discordRegister
 
@@ -57,7 +57,7 @@ func (emitter *DiscordEmitter) Deregister(subscriber string, resourceInfo any) {
 	}
 }
 
-func (emitter *DiscordEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (emitter *DiscordEmitter) UpdateEmitter() chan chat_service.MessageUpdate {
 	return emitter.updateEmitter
 }
 
@@ -67,7 +67,7 @@ func (emitter *DiscordEmitter) CloseEmitter() error {
 }
 
 func NewEmitter(token string) (*DiscordEmitter, error) {
-	messageUpdates := make(chan service.MessageUpdate)
+	messageUpdates := make(chan chat_service.MessageUpdate)
 
 	client, err := dg.New("Bot " + token)
 	if err != nil {
@@ -88,11 +88,11 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	client.AddHandler(func(s *dg.Session, m *dg.MessageCreate) {
 		if discordEmitter.register.check(m.GuildID, m.ChannelID) {
 
-			messageUpdates <- service.MessageUpdate{
+			messageUpdates <- chat_service.MessageUpdate{
 				UpdateTime: m.Timestamp,
-				Update:     service.New,
-				Message: service.Message{
-					Source:       service.Discord,
+				Update:     chat_service.New,
+				Message: chat_service.Message{
+					Source:       chat_service.Discord,
 					Id:           m.ID,
 					Author:       discordMsgParser.ParseAuthor(m.Author, m.ChannelID),
 					MessageParts: discordMsgParser.ParseMessage(m.Message),
@@ -109,11 +109,11 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	client.AddHandler(func(s *dg.Session, m *dg.MessageDelete) {
 		if discordEmitter.register.check(m.GuildID, m.ChannelID) {
 
-			messageUpdates <- service.MessageUpdate{
+			messageUpdates <- chat_service.MessageUpdate{
 				UpdateTime: m.Timestamp,
-				Update:     service.Delete,
-				Message: service.Message{
-					Source: service.Discord,
+				Update:     chat_service.Delete,
+				Message: chat_service.Message{
+					Source: chat_service.Discord,
 					Id:     m.ID,
 				},
 				ExtraFields: DiscordInfo{
@@ -127,11 +127,11 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 	client.AddHandler(func(s *dg.Session, m *dg.MessageUpdate) {
 		if discordEmitter.register.check(m.GuildID, m.ChannelID) {
 
-			messageUpdates <- service.MessageUpdate{
+			messageUpdates <- chat_service.MessageUpdate{
 				UpdateTime: m.Timestamp,
-				Update:     service.Edit,
-				Message: service.Message{
-					Source:       service.Discord,
+				Update:     chat_service.Edit,
+				Message: chat_service.Message{
+					Source:       chat_service.Discord,
 					Id:           m.ID,
 					Author:       discordMsgParser.ParseAuthor(m.Author, m.ChannelID),
 					MessageParts: discordMsgParser.ParseMessage(m.Message),

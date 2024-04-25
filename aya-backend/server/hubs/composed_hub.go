@@ -2,11 +2,11 @@ package hubs
 
 import (
 	models "aya-backend/db-models"
+	"aya-backend/server/chat_service"
+	"aya-backend/server/chat_service/composed"
+	discordsource "aya-backend/server/chat_service/discord"
+	youtubesource "aya-backend/server/chat_service/youtube"
 	"aya-backend/server/db"
-	"aya-backend/server/service"
-	"aya-backend/server/service/composed"
-	discordsource "aya-backend/server/service/discord"
-	youtubesource "aya-backend/server/service/youtube"
 	"fmt"
 	"gorm.io/gorm"
 	"sync"
@@ -67,13 +67,13 @@ func (m *MessageHub) GetSessionId(resourceInfo any) []string {
 		return []string{}
 	}
 	switch hubResourceInfo.ResourceType {
-	case service.Discord:
+	case chat_service.Discord:
 		if m.discordHub != nil {
 			return m.discordHub.GetSessionId(hubResourceInfo.ResourceInfo)
 		} else {
 			return []string{}
 		}
-	case service.Youtube:
+	case chat_service.Youtube:
 		if m.youtubeHub != nil {
 			return m.youtubeHub.GetSessionId(hubResourceInfo.ResourceInfo)
 		} else {
@@ -97,12 +97,12 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 	var youtubeResources []youtubesource.YoutubeInfo
 	for _, resource := range resources {
 		switch resource.ResourceType {
-		case service.Discord:
+		case chat_service.Discord:
 			discordResource, ok := resource.ResourceInfo.(discordsource.DiscordInfo)
 			if ok {
 				discordResources = append(discordResources, discordResource)
 			}
-		case service.Youtube:
+		case chat_service.Youtube:
 			youtubeResource, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
 			if ok {
 				youtubeResources = append(youtubeResources, youtubeResource)

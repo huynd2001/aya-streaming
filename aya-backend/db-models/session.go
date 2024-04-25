@@ -1,9 +1,9 @@
 package models
 
 import (
-	"aya-backend/server/service"
-	discordsource "aya-backend/server/service/discord"
-	youtubesource "aya-backend/server/service/youtube"
+	"aya-backend/server/chat_service"
+	discordsource "aya-backend/server/chat_service/discord"
+	youtubesource "aya-backend/server/chat_service/youtube"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -20,14 +20,14 @@ type GORMSession struct {
 }
 
 type Resource struct {
-	ResourceType service.Source `json:"resourceType"`
-	ResourceInfo any            `json:"resourceInfo"`
+	ResourceType chat_service.Source `json:"resourceType"`
+	ResourceInfo any                 `json:"resourceInfo"`
 }
 
 func (r *Resource) UnmarshalJSON(data []byte) error {
 	var resource struct {
-		ResourceType    service.Source `json:"resourceType"`
-		ResourceInfoAny any            `json:"resourceInfo"`
+		ResourceType    chat_service.Source `json:"resourceType"`
+		ResourceInfoAny any                 `json:"resourceInfo"`
 	}
 	var err error
 	if err = json.Unmarshal(data, &resource); err != nil {
@@ -41,7 +41,7 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 	}
 
 	switch r.ResourceType {
-	case service.Discord:
+	case chat_service.Discord:
 		var discordInfo discordsource.DiscordInfo
 		err := json.Unmarshal(resourceInfoStr, &discordInfo)
 		if err != nil {
@@ -50,7 +50,7 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 			r.ResourceInfo = discordInfo
 			return nil
 		}
-	case service.Youtube:
+	case chat_service.Youtube:
 		var youtubeInfo youtubesource.YoutubeInfo
 		err := json.Unmarshal(resourceInfoStr, &youtubeInfo)
 		if err != nil {

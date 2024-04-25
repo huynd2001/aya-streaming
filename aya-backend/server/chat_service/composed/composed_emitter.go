@@ -1,10 +1,10 @@
 package composed
 
 import (
-	"aya-backend/server/service"
-	discordsource "aya-backend/server/service/discord"
-	"aya-backend/server/service/test_source"
-	youtubesource "aya-backend/server/service/youtube"
+	"aya-backend/server/chat_service"
+	discordsource "aya-backend/server/chat_service/discord"
+	"aya-backend/server/chat_service/test_source"
+	youtubesource "aya-backend/server/chat_service/youtube"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -21,12 +21,12 @@ const (
 )
 
 type MessageEmitter struct {
-	service.ChatEmitter
+	chat_service.ChatEmitter
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
 
-	updateEmitter chan service.MessageUpdate
+	updateEmitter chan chat_service.MessageUpdate
 }
 
 func (messageEmitter *MessageEmitter) GetDiscordEmitter() *discordsource.DiscordEmitter {
@@ -45,7 +45,7 @@ type MessageChannelConfig struct {
 	Router  *mux.Router
 }
 
-func (messageEmitter *MessageEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (messageEmitter *MessageEmitter) UpdateEmitter() chan chat_service.MessageUpdate {
 	return messageEmitter.updateEmitter
 }
 
@@ -123,7 +123,7 @@ func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitt
 		}
 	}
 
-	msgC := make(chan service.MessageUpdate)
+	msgC := make(chan chat_service.MessageUpdate)
 
 	if messageChannel.testEmitter != nil {
 		go func() {

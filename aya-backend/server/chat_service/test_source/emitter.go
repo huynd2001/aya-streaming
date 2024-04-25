@@ -1,7 +1,7 @@
 package test_source
 
 import (
-	. "aya-backend/server/service"
+	. "aya-backend/server/chat_service"
 	"fmt"
 	"time"
 )

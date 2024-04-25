@@ -2,7 +2,7 @@ package youtube_source
 
 import (
 	"aya-backend/server/auth"
-	"aya-backend/server/service"
+	"aya-backend/server/chat_service"
 	"context"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -23,12 +23,12 @@ type YoutubeEmitterConfig struct {
 }
 
 type YoutubeEmitter struct {
-	service.ChatEmitter
-	service.ResourceRegister
+	chat_service.ChatEmitter
+	chat_service.ResourceRegister
 
 	mutex sync.Mutex
 
-	updateEmitter       chan service.MessageUpdate
+	updateEmitter       chan chat_service.MessageUpdate
 	errorEmitter        chan error
 	register            *youtubeRegister
 	resource2Subscriber map[string]map[string]bool
@@ -72,7 +72,7 @@ func (emitter *YoutubeEmitter) Deregister(subscriber string, resourceInfo any) {
 
 }
 
-func (emitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (emitter *YoutubeEmitter) UpdateEmitter() chan chat_service.MessageUpdate {
 	return emitter.updateEmitter
 }
 
@@ -134,7 +134,7 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 // retrieved from the workflow.
 func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 
-	messageUpdates := make(chan service.MessageUpdate)
+	messageUpdates := make(chan chat_service.MessageUpdate)
 	errorCh := make(chan error)
 
 	ctx := context.Background()

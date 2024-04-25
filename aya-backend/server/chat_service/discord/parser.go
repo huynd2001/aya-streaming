@@ -1,7 +1,7 @@
 package discord_source
 
 import (
-	. "aya-backend/server/service"
+	. "aya-backend/server/chat_service"
 	"fmt"
 	dg "github.com/bwmarrin/discordgo"
 	"regexp"
