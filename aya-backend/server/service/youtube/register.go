@@ -19,32 +19,120 @@ type youtubeRegister struct {
 	channelKillSignal map[string]chan bool
 	apiCaller         *liveChatApiCaller
 	ytService         *yt.Service
+	msgChan           chan service.MessageUpdate
 }
 
-func newYoutubeRegister(ytService *yt.Service) *youtubeRegister {
+func newYoutubeRegister(ytService *yt.Service, msgChan chan service.MessageUpdate) *youtubeRegister {
 	youtubeReg := youtubeRegister{
 		channelKillSignal: make(map[string]chan bool),
 		apiCaller:         newApiCaller(ytService),
 		ytService:         ytService,
+		msgChan:           msgChan,
 	}
 	return &youtubeReg
 }
 
-func (register *youtubeRegister) deregisterChannel(channelId string) {
-	register.mutex.Lock()
-	defer register.mutex.Unlock()
-	if register.channelKillSignal[channelId] == nil {
-		// Don't have to do anything
-		fmt.Printf("channel %s have not been registered, doing nothing\n", channelId)
-		return
+func getLiveChatIdFromChannelId(ytService *yt.Service, channelId string) (string, error) {
+	searchRes, err := ytService.Search.
+		List([]string{"id"}).
+		ChannelId(channelId).
+		EventType("live").
+		Type("video").
+		Do()
+	if err != nil {
+		return "", err
 	}
-	register.channelKillSignal[channelId] <- true
-	close(register.channelKillSignal[channelId])
-	delete(register.channelKillSignal, channelId)
-	fmt.Printf("channel %s has been deregistered\n", channelId)
+
+	if len(searchRes.Items) == 0 {
+		return "", fmt.Errorf("no live videos found for channel %s", channelId)
+	}
+
+	videoId := searchRes.Items[0].Id.VideoId
+
+	videoRes, err :=
+		ytService.Videos.
+			List([]string{"liveStreamingDetails"}).
+			Id(videoId).
+			Do()
+
+	if err != nil {
+		return "", err
+	}
+
+	var liveChatId string
+
+	for _, item := range videoRes.Items {
+		liveChatId = item.LiveStreamingDetails.ActiveLiveChatId
+	}
+
+	if liveChatId == "" {
+		return "", fmt.Errorf("cannot find live videos on channel %s", channelId)
+	}
+
+	color.Green("Got the live video for channel %s", channelId)
+	return liveChatId, nil
 }
 
-func (register *youtubeRegister) registerChannel(channelId string, msgChan chan service.MessageUpdate) {
+func listenForChatMessages(
+	ytService *yt.Service,
+	apiCaller *liveChatApiCaller,
+	liveChatId string,
+	channelId string,
+	stopSignal chan bool,
+	parser *YoutubeMessageParser,
+) chan service.MessageUpdate {
+	var err error
+	msgChan := make(chan service.MessageUpdate)
+
+	go func() {
+		<-stopSignal
+		err = fmt.Errorf(color.RedString("Stop Signal received. Kill the live stream reading"))
+	}()
+
+	go func() {
+		var pageToken *string
+		for err == nil {
+			liveChatMessagesService := yt.NewLiveChatMessagesService(ytService)
+			liveChatServiceCall := liveChatMessagesService.List(liveChatId, []string{"snippet", "authorDetails"})
+			if pageToken != nil {
+				liveChatServiceCall = liveChatServiceCall.PageToken(*pageToken)
+			}
+			color.Green("Calling liveChatApi")
+			responseCh, apiErrCh := apiCaller.Request(liveChatServiceCall)
+			color.Yellow("api call dispatch")
+			select {
+			case apiErr := <-apiErrCh:
+				err = apiErr
+			case response := <-responseCh:
+				color.Green("response received!")
+				for _, item := range response.Items {
+					if item != nil && item.Snippet != nil {
+						publishedTime, parseErr := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
+						if parseErr != nil {
+							publishedTime = time.Now()
+						}
+						fmt.Printf("%#v\n", item)
+						msgChan <- service.MessageUpdate{
+							UpdateTime: publishedTime,
+							Update:     service.New,
+							Message:    parser.ParseMessage(item),
+							ExtraFields: YoutubeInfo{
+								YoutubeChannelId: channelId,
+							},
+						}
+					}
+				}
+				pageToken = &response.NextPageToken
+			}
+		}
+		color.Red("Error during listening to live channel %s: %s", channelId, err.Error())
+		close(msgChan)
+	}()
+
+	return msgChan
+}
+
+func (register *youtubeRegister) registerChannel(channelId string) {
 	// attempt to get the channel info, i.e. is there any live vid at the moment
 
 	register.mutex.Lock()
@@ -62,144 +150,58 @@ func (register *youtubeRegister) registerChannel(channelId string, msgChan chan 
 	}
 
 	stopSignals := make(chan bool)
-	register.channelKillSignal[channelId] = stopSignals
 	errCh := make(chan error)
 	stopDuringListening := make(chan bool)
+	register.channelKillSignal[channelId] = stopSignals
 
 	ytParser := YoutubeMessageParser{}
 
-	setupChannel := func() {
+	setupChannel := func() chan service.MessageUpdate {
 
-		color.Yellow("setup channel %s\n", channelId)
-
-		searchRes, err := register.ytService.Search.
-			List([]string{"id"}).
-			ChannelId(channelId).
-			EventType("live").
-			Type("video").
-			Do()
+		liveChatId, err := getLiveChatIdFromChannelId(register.ytService, channelId)
 		if err != nil {
 			errCh <- err
-			return
+			return nil
 		}
 
-		if len(searchRes.Items) == 0 {
-			errCh <- fmt.Errorf("no live videos found for channel %s", channelId)
-			return
-		}
-
-		videoId := searchRes.Items[0].Id.VideoId
-
-		videoRes, err :=
-			register.ytService.Videos.
-				List([]string{"liveStreamingDetails"}).
-				Id(videoId).
-				Do()
-
-		if err != nil {
-			errCh <- err
-			return
-		}
-
-		liveChatId := ""
-
-		for _, item := range videoRes.Items {
-			liveChatId = item.LiveStreamingDetails.ActiveLiveChatId
-		}
-
-		if liveChatId == "" {
-			errCh <- fmt.Errorf("the live has ended")
-			return
-		}
-
-		color.Green("Got the live video for channel %s", channelId)
-
-		var pageToken *string
-
-		for {
-			liveChatMessagesService := yt.NewLiveChatMessagesService(register.ytService)
-			liveChatServiceCall := liveChatMessagesService.List(liveChatId, []string{"snippet", "authorDetails"})
-			if pageToken != nil {
-				liveChatServiceCall = liveChatServiceCall.PageToken(*pageToken)
-			}
-			apiErrCh := make(chan error)
-			responseCh := make(chan *yt.LiveChatMessageListResponse)
-			liveChatApiRequest := liveChatAPIRequest{
-				requestCall: liveChatServiceCall,
-				responseCh:  responseCh,
-				errCh:       apiErrCh,
-			}
-			color.Green("Calling liveChatApi")
-			register.apiCaller.Request(liveChatApiRequest)
-			select {
-			case <-stopSignals:
-				stopDuringListening <- true
-				close(stopDuringListening)
-				color.Red("stop signal during the stream of %s, stop", channelId)
-				// wait for response from err and response before closing down
-				select {
-				case err := <-apiErrCh:
-					errCh <- err
-				case response := <-responseCh:
-					for _, item := range response.Items {
-						if item != nil && item.Snippet != nil {
-							publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
-							if err != nil {
-								publishedTime = time.Now()
-							}
-							msgChan <- service.MessageUpdate{
-								UpdateTime: publishedTime,
-								Update:     service.New,
-								Message:    ytParser.ParseMessage(item),
-								ExtraFields: YoutubeInfo{
-									YoutubeChannelId: channelId,
-								},
-							}
-						}
-					}
-				}
-				return
-			case err := <-apiErrCh:
-				fmt.Printf("Error during api calls: %v\n", err.Error())
-				errCh <- err
-				return
-			case response := <-responseCh:
-				pageToken = &response.NextPageToken
-				for _, item := range response.Items {
-					if item != nil && item.Snippet != nil {
-						publishedTime, err := time.Parse(time.RFC3339, item.Snippet.PublishedAt)
-						if err != nil {
-							publishedTime = time.Now()
-						}
-						msgChan <- service.MessageUpdate{
-							UpdateTime: publishedTime,
-							Update:     service.New,
-							Message:    ytParser.ParseMessage(item),
-							ExtraFields: YoutubeInfo{
-								YoutubeChannelId: channelId,
-							},
-						}
-					}
-				}
-			}
-		}
+		return listenForChatMessages(register.ytService, register.apiCaller, liveChatId, channelId, stopDuringListening, &ytParser)
 	}
 
 	go func() {
-		go setupChannel()
+
 		for {
+			color.Green("Start listening for messages from channel %s", channelId)
+			go func() {
+				liveChatMsg := setupChannel()
+				color.Cyan("start listening from livechat")
+				if liveChatMsg == nil {
+					return
+				} else {
+					ok := true
+					var ytMsg service.MessageUpdate
+					for ok {
+						ytMsg, ok = <-liveChatMsg
+						if ok {
+							register.msgChan <- ytMsg
+						}
+
+					}
+				}
+			}()
 			select {
 			case err := <-errCh:
 				// sleep for a duration before a cool reset
-				fmt.Printf("Error during processing channel %s: %s\nReseting in %s\n", channelId, err.Error(), TIME_UNTIL_RETRY)
+				color.Red("Error during processing channel %s: %s\n", channelId, err.Error())
+				color.Yellow("Resetting in %s\n", TIME_UNTIL_RETRY)
 				select {
 				case <-time.After(TIME_UNTIL_RETRY):
-					go setupChannel()
 				case <-stopSignals:
-					register.Stop()
+					stopDuringListening <- true
+					color.Red("Stop when listening for channel %s. Return", channelId)
 					return
 				}
-			case <-stopDuringListening:
+			case <-stopSignals:
+				stopDuringListening <- true
 				color.Red("Stop when listening for channel %s. Return", channelId)
 				return
 			}
@@ -214,6 +216,20 @@ func (register *youtubeRegister) SetYTService(ytService *yt.Service) {
 	register.apiCaller.SetYTService(ytService)
 }
 
+func (register *youtubeRegister) deregisterChannel(channelId string) {
+	register.mutex.Lock()
+	defer register.mutex.Unlock()
+	if register.channelKillSignal[channelId] == nil {
+		// Don't have to do anything
+		fmt.Printf("channel %s have not been registered, doing nothing\n", channelId)
+		return
+	}
+	register.channelKillSignal[channelId] <- true
+	close(register.channelKillSignal[channelId])
+	delete(register.channelKillSignal, channelId)
+	fmt.Printf("channel %s has been deregistered\n", channelId)
+}
+
 func (register *youtubeRegister) Stop() {
 	register.mutex.Lock()
 	defer register.mutex.Unlock()
@@ -221,6 +237,8 @@ func (register *youtubeRegister) Stop() {
 		killSig <- true
 		color.Red("Kill Signal sent to channel %s", channelId)
 		close(killSig)
+		delete(register.channelKillSignal, channelId)
 	}
+
 	register.apiCaller.Stop()
 }

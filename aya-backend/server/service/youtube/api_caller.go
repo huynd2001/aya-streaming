@@ -73,6 +73,14 @@ func (apiCaller *liveChatApiCaller) Stop() {
 	apiCaller.apiStopCallSig <- true
 }
 
-func (apiCaller *liveChatApiCaller) Request(req liveChatAPIRequest) {
+func (apiCaller *liveChatApiCaller) Request(reqCall *yt.LiveChatMessagesListCall) (chan *yt.LiveChatMessageListResponse, chan error) {
+	responseCh := make(chan *yt.LiveChatMessageListResponse)
+	errCh := make(chan error)
+	req := liveChatAPIRequest{
+		requestCall: reqCall,
+		responseCh:  responseCh,
+		errCh:       errCh,
+	}
 	apiCaller.requestCall <- req
+	return responseCh, errCh
 }

@@ -45,7 +45,7 @@ func (emitter *YoutubeEmitter) Register(subscriber string, resourceInfo any) {
 	if emitter.resource2Subscriber[channelId] == nil {
 		emitter.resource2Subscriber[channelId] = make(map[string]bool)
 		emitter.resource2Subscriber[channelId][subscriber] = true
-		emitter.register.registerChannel(channelId, emitter.updateEmitter)
+		emitter.register.registerChannel(channelId)
 	} else {
 		emitter.resource2Subscriber[channelId][subscriber] = true
 	}
@@ -147,7 +147,7 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 	youtubeEmitter := YoutubeEmitter{
 		updateEmitter:       messageUpdates,
 		errorEmitter:        errorCh,
-		register:            newYoutubeRegister(apiYTService),
+		register:            newYoutubeRegister(apiYTService, messageUpdates),
 		resource2Subscriber: make(map[string]map[string]bool),
 	}
 
