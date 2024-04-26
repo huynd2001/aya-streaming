@@ -19,8 +19,8 @@ type YoutubeEmitterConfig struct {
 	ClientID     string
 	ClientSecret string
 
-	Router           *mux.Router
-	RedirectBasedUrl string
+	AuthRouter           *mux.Router
+	AuthRedirectBasedUrl string
 }
 
 type YoutubeEmitter struct {
@@ -103,7 +103,7 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 	oauth2Config := oauth2.Config{
 		ClientID:     config.ClientID,
 		ClientSecret: config.ClientSecret,
-		RedirectURL:  fmt.Sprintf("%s/youtube.callback", config.RedirectBasedUrl),
+		RedirectURL:  fmt.Sprintf("%s/youtube.callback", config.AuthRedirectBasedUrl),
 
 		// Discovery returns the OAuth2 endpoints.
 		Endpoint: google.Endpoint,
@@ -113,12 +113,12 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 	}
 
 	workflow.SetUpRedirectAndCodeChallenge(
-		config.Router.PathPrefix("/youtube.redirect").Subrouter(),
-		config.Router.PathPrefix("/youtube.callback").Subrouter(),
+		config.AuthRouter.PathPrefix("/youtube.redirect").Subrouter(),
+		config.AuthRouter.PathPrefix("/youtube.callback").Subrouter(),
 	)
 	workflow.SetUpAuth(
 		oauth2Config,
-		fmt.Sprintf("%s/youtube.redirect", config.RedirectBasedUrl),
+		fmt.Sprintf("%s/youtube.redirect", config.AuthRedirectBasedUrl),
 	)
 
 	// Await for the tokenSource from the workflow channel

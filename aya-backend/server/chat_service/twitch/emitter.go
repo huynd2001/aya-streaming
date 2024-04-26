@@ -18,8 +18,8 @@ type TwitchEmitterConfig struct {
 	ClientSecret string
 	BotUserName  string
 
-	Router           *mux.Router
-	RedirectBasedUrl string
+	AuthRouter           *mux.Router
+	AuthRedirectBasedUrl string
 }
 
 type TwitchEmitter struct {
@@ -112,7 +112,7 @@ func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) error {
 	return newClient.Connect()
 }
 
-func NewEmitter(config TwitchEmitterConfig) *TwitchEmitter {
+func NewEmitter(config TwitchEmitterConfig) (*TwitchEmitter, error) {
 	emitter := TwitchEmitter{
 		updateEmitter: make(chan chat_service.MessageUpdate),
 		errorEmitter:  make(chan error),
@@ -136,7 +136,7 @@ func NewEmitter(config TwitchEmitterConfig) *TwitchEmitter {
 		oauth2Config := oauth2.Config{
 			ClientID:     config.ClientID,
 			ClientSecret: config.ClientSecret,
-			RedirectURL:  fmt.Sprintf("%s/twitch.callback", config.RedirectBasedUrl),
+			RedirectURL:  fmt.Sprintf("%s/twitch.callback", config.AuthRedirectBasedUrl),
 
 			Endpoint: twitch2.Endpoint,
 
@@ -144,13 +144,13 @@ func NewEmitter(config TwitchEmitterConfig) *TwitchEmitter {
 		}
 
 		workflow.SetUpRedirectAndCodeChallenge(
-			config.Router.PathPrefix("/twitch.redirect").Subrouter(),
-			config.Router.PathPrefix("/twitch.callback").Subrouter(),
+			config.AuthRouter.PathPrefix("/twitch.redirect").Subrouter(),
+			config.AuthRouter.PathPrefix("/twitch.callback").Subrouter(),
 		)
 
 		workflow.SetUpAuth(
 			oauth2Config,
-			fmt.Sprintf("%s/twitch.redirect", config.RedirectBasedUrl),
+			fmt.Sprintf("%s/twitch.redirect", config.AuthRedirectBasedUrl),
 		)
 
 		tokenSource := <-workflow.TokenSourceCh()
@@ -162,6 +162,7 @@ func NewEmitter(config TwitchEmitterConfig) *TwitchEmitter {
 				emitter.errorEmitter <- fmt.Errorf("cannot get token from retrieved token source: %s", err.Error())
 				return
 			}
+			// TODO: get the claim from the access OAUTH token from oidc code flow?
 			client := twitch.NewClient(config.BotUserName, fmt.Sprintf("oauth2:%s", token.AccessToken))
 			err = emitter.setClient(client)
 			if err != nil {
@@ -180,5 +181,5 @@ func NewEmitter(config TwitchEmitterConfig) *TwitchEmitter {
 	}()
 
 	color.Green("New Twitch Emitter created!\n")
-	return &emitter
+	return &emitter, nil
 }
