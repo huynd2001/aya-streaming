@@ -39,7 +39,7 @@ func (workflow *Workflow) TokenSourceCh() chan oauth2.TokenSource {
 	return workflow.tokenSourceCh
 }
 
-func (workflow *Workflow) SetupAuth(
+func (workflow *Workflow) SetUpAuth(
 	oauthConfig oauth2.Config,
 	promptURL string,
 ) {

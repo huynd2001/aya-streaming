@@ -4,6 +4,7 @@ import (
 	"aya-backend/server/chat_service"
 	"fmt"
 	dg "github.com/bwmarrin/discordgo"
+	"github.com/fatih/color"
 	"sync"
 )
 
@@ -150,6 +151,6 @@ func NewEmitter(token string) (*DiscordEmitter, error) {
 		return nil, err
 	}
 
-	fmt.Printf("New Discord Emitter created!\n")
+	color.Green("New Discord Emitter created!\n")
 	return &discordEmitter, nil
 }

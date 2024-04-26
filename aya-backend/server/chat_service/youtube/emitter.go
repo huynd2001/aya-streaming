@@ -5,6 +5,7 @@ import (
 	"aya-backend/server/chat_service"
 	"context"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -115,7 +116,7 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 		config.Router.PathPrefix("/youtube.redirect").Subrouter(),
 		config.Router.PathPrefix("/youtube.callback").Subrouter(),
 	)
-	workflow.SetupAuth(
+	workflow.SetUpAuth(
 		oauth2Config,
 		fmt.Sprintf("%s/youtube.redirect", config.RedirectBasedUrl),
 	)
@@ -160,6 +161,6 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 		youtubeEmitter.register.SetYTService(ytService)
 	}()
 
-	fmt.Printf("New Youtube Emitter created!\n")
+	color.Green("New Youtube Emitter created!\n")
 	return &youtubeEmitter, nil
 }
