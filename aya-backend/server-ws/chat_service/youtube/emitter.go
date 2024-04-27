@@ -1,8 +1,8 @@
 package youtube_source
 
 import (
-	"aya-backend/server/auth"
-	"aya-backend/server/chat_service"
+	"aya-backend/server-ws/auth"
+	"aya-backend/server-ws/chat_service"
 	"context"
 	"fmt"
 	"github.com/fatih/color"

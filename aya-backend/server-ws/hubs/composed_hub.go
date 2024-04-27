@@ -2,12 +2,12 @@ package hubs
 
 import (
 	models "aya-backend/db-models"
-	"aya-backend/server/chat_service"
-	"aya-backend/server/chat_service/composed"
-	discordsource "aya-backend/server/chat_service/discord"
-	twitch_source "aya-backend/server/chat_service/twitch"
-	youtubesource "aya-backend/server/chat_service/youtube"
-	"aya-backend/server/db"
+	"aya-backend/server-ws/chat_service"
+	"aya-backend/server-ws/chat_service/composed"
+	discordsource "aya-backend/server-ws/chat_service/discord"
+	twitchsource "aya-backend/server-ws/chat_service/twitch"
+	youtubesource "aya-backend/server-ws/chat_service/youtube"
+	"aya-backend/server-ws/db"
 	"fmt"
 	"gorm.io/gorm"
 	"sync"
@@ -104,7 +104,7 @@ func (m *MessageHub) RemoveSession(sessionId string) {
 func (m *MessageHub) RegisterSessionResources(sessionId string, resources []models.Resource) {
 	var discordResources []discordsource.DiscordInfo
 	var youtubeResources []youtubesource.YoutubeInfo
-	var twitchResources []twitch_source.TwitchInfo
+	var twitchResources []twitchsource.TwitchInfo
 	for _, resource := range resources {
 		switch resource.ResourceType {
 		case chat_service.Discord:
@@ -118,7 +118,7 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 				youtubeResources = append(youtubeResources, youtubeResource)
 			}
 		case chat_service.Twitch:
-			twitchResource, ok := resource.ResourceInfo.(twitch_source.TwitchInfo)
+			twitchResource, ok := resource.ResourceInfo.(twitchsource.TwitchInfo)
 			if ok {
 				twitchResources = append(twitchResources, twitchResource)
 			}

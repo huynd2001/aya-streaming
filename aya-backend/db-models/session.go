@@ -1,10 +1,10 @@
 package models
 
 import (
-	"aya-backend/server/chat_service"
-	discordsource "aya-backend/server/chat_service/discord"
-	twitch_source "aya-backend/server/chat_service/twitch"
-	youtubesource "aya-backend/server/chat_service/youtube"
+	"aya-backend/server-ws/chat_service"
+	discordsource "aya-backend/server-ws/chat_service/discord"
+	twitchsource "aya-backend/server-ws/chat_service/twitch"
+	youtubesource "aya-backend/server-ws/chat_service/youtube"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
@@ -61,7 +61,7 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 	case chat_service.Twitch:
-		var twitchInfo twitch_source.TwitchInfo
+		var twitchInfo twitchsource.TwitchInfo
 		err := json.Unmarshal(resourceInfoStr, &twitchInfo)
 		if err != nil {
 			return fmt.Errorf("resource of type 'twitch', but cannot parse the info: %s", err.Error())

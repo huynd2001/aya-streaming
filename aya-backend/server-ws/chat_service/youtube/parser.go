@@ -1,7 +1,7 @@
 package youtube_source
 
 import (
-	. "aya-backend/server/chat_service"
+	. "aya-backend/server-ws/chat_service"
 	yt "google.golang.org/api/youtube/v3"
 )
 

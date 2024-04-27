@@ -76,5 +76,8 @@ jobs:
       - name: Build Aya Db Migrations
         run: go build -C aya-backend/db-migration -v
 
-      - name: Build Aya Server
-        run: go build -C aya-backend/server -v
+      - name: Build Aya Api Server
+        run: go build -C aya-backend/server-api -v
+
+      - name: Build Aya Websocket Server
+        run: go build -C aya-backend/server-ws -v
