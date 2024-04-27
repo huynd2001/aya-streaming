@@ -1,11 +1,11 @@
 package composed
 
 import (
-	"aya-backend/server/chat_service"
-	discordsource "aya-backend/server/chat_service/discord"
-	"aya-backend/server/chat_service/test_source"
-	twitch_source "aya-backend/server/chat_service/twitch"
-	youtubesource "aya-backend/server/chat_service/youtube"
+	"aya-backend/server-ws/chat_service"
+	discordsource "aya-backend/server-ws/chat_service/discord"
+	"aya-backend/server-ws/chat_service/test_source"
+	twitchsource "aya-backend/server-ws/chat_service/twitch"
+	youtubesource "aya-backend/server-ws/chat_service/youtube"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -30,7 +30,7 @@ type MessageEmitter struct {
 	discordEmitter *discordsource.DiscordEmitter
 	testEmitter    *test_source.TestEmitter
 	youtubeEmitter *youtubesource.YoutubeEmitter
-	twitchEmitter  *twitch_source.TwitchEmitter
+	twitchEmitter  *twitchsource.TwitchEmitter
 
 	updateEmitter chan chat_service.MessageUpdate
 }
@@ -43,7 +43,7 @@ func (messageEmitter *MessageEmitter) GetYoutubeEmitter() *youtubesource.Youtube
 	return messageEmitter.youtubeEmitter
 }
 
-func (messageEmitter *MessageEmitter) GetTwitchEmitter() *twitch_source.TwitchEmitter {
+func (messageEmitter *MessageEmitter) GetTwitchEmitter() *twitchsource.TwitchEmitter {
 	return messageEmitter.twitchEmitter
 }
 
@@ -139,7 +139,7 @@ func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitt
 		twitchClientSecret := os.Getenv(TWITCH_CLIENT_SECRET_ENV)
 		twitchBotUsername := os.Getenv(TWITCH_BOT_USERNAME_ENV)
 
-		twitchEmitterConfig := twitch_source.TwitchEmitterConfig{}
+		twitchEmitterConfig := twitchsource.TwitchEmitterConfig{}
 
 		twitchEmitterConfig.ClientID = twitchClientId
 		twitchEmitterConfig.ClientSecret = twitchClientSecret
@@ -147,7 +147,7 @@ func NewMessageEmitter(messageChannelConfig *MessageChannelConfig) *MessageEmitt
 		twitchEmitterConfig.AuthRouter = messageChannelConfig.Router.PathPrefix("/auth").Subrouter()
 		twitchEmitterConfig.AuthRedirectBasedUrl = fmt.Sprintf("%s/auth", messageChannelConfig.BaseURL)
 
-		twitchEmitter, err := twitch_source.NewEmitter(twitchEmitterConfig)
+		twitchEmitter, err := twitchsource.NewEmitter(twitchEmitterConfig)
 		if err != nil {
 			fmt.Printf("Error during creating a twitch emitter: %s\n", err.Error())
 		} else {

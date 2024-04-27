@@ -2,10 +2,9 @@ package main
 
 import (
 	models "aya-backend/db-models"
-	"aya-backend/server/api"
-	"aya-backend/server/chat_service/composed"
-	"aya-backend/server/hubs"
-	"aya-backend/server/socket"
+	"aya-backend/server-ws/chat_service/composed"
+	"aya-backend/server-ws/hubs"
+	"aya-backend/server-ws/socket"
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -93,7 +92,6 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	fmt.Println("Hello, world!")
 	r := mux.NewRouter()
 
 	gormDB, err := getDB()
@@ -111,9 +109,6 @@ func main() {
 	msgChanEmitter := composed.NewMessageEmitter(msgChanConfig)
 	msgHub := hubs.NewMessageHub(msgChanEmitter, gormDB)
 
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-
 	streamRouter := r.PathPrefix("/stream").Subrouter()
 
 	wsServer, err := socket.NewWSServer(streamRouter, msgHub, msgChanEmitter)
@@ -122,9 +117,8 @@ func main() {
 		return
 	}
 
-	apiRouter := r.PathPrefix("/api").Subrouter()
-
-	api.NewApiServer(gormDB, apiRouter)
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	http.Handle("/", r)
 	fmt.Println("Server's up and running!")
@@ -142,7 +136,7 @@ func main() {
 			case <-sc:
 				fmt.Println("End Server!")
 				if err := server.Close(); err != nil {
-					fmt.Printf("Error when closing server: %s\n", err.Error())
+					fmt.Printf("Error when closing websocket server: %s\n", err.Error())
 				}
 				if err := msgChanEmitter.CloseEmitter(); err != nil {
 					fmt.Printf("%s\n", err.Error())

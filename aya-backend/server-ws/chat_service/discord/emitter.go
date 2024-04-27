@@ -1,7 +1,7 @@
 package discord_source
 
 import (
-	"aya-backend/server/chat_service"
+	"aya-backend/server-ws/chat_service"
 	"fmt"
 	dg "github.com/bwmarrin/discordgo"
 	"github.com/fatih/color"

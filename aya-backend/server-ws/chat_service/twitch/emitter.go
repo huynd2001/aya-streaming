@@ -1,8 +1,8 @@
 package twitch_source
 
 import (
-	"aya-backend/server/auth"
-	"aya-backend/server/chat_service"
+	"aya-backend/server-ws/auth"
+	"aya-backend/server-ws/chat_service"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/gempir/go-twitch-irc/v4"
@@ -100,7 +100,6 @@ func TwitchPrivateMessageHandler(parser *TwitchMessageParser, msgChan chan chat_
 func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) {
 	emitter.mutex.Lock()
 	defer emitter.mutex.Unlock()
-	fmt.Println("djt me may #3")
 	if emitter.twitchClient != nil {
 		err := emitter.twitchClient.Disconnect()
 		if err != nil {
@@ -108,7 +107,6 @@ func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) {
 			emitter.ErrorEmitter() <- err
 		}
 	}
-	fmt.Println("djt me may #4")
 
 	parser := TwitchMessageParser{}
 	newClient.OnPrivateMessage(TwitchPrivateMessageHandler(&parser, emitter.updateEmitter))
@@ -116,7 +114,6 @@ func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) {
 	for resource := range emitter.resource2Subscriber {
 		newClient.Join(resource)
 	}
-	fmt.Println("djt me may #5")
 
 	emitter.twitchClient = newClient
 	go func() {
@@ -128,7 +125,7 @@ func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) {
 }
 
 func NewEmitter(config TwitchEmitterConfig) (*TwitchEmitter, error) {
-	fmt.Println("djt me may # 1")
+
 	emitter := TwitchEmitter{
 		updateEmitter:       make(chan chat_service.MessageUpdate),
 		errorEmitter:        make(chan error),
@@ -136,8 +133,6 @@ func NewEmitter(config TwitchEmitterConfig) (*TwitchEmitter, error) {
 	}
 
 	emitter.setClient(twitch.NewAnonymousClient())
-	fmt.Println("djt me may # 2")
-
 	go func() {
 		workflow := auth.NewWorkflow()
 

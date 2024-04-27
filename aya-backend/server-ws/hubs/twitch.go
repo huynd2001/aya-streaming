@@ -1,7 +1,7 @@
 package hubs
 
 import (
-	twitch_source "aya-backend/server/chat_service/twitch"
+	twitchsource "aya-backend/server-ws/chat_service/twitch"
 	"fmt"
 	"github.com/fatih/color"
 	"sync"
@@ -12,10 +12,10 @@ type TwitchResourceHub struct {
 	mutex               sync.RWMutex
 	channelName2Session map[string]map[string]bool
 	session2ChannelName map[string]map[string]bool
-	emitter             *twitch_source.TwitchEmitter
+	emitter             *twitchsource.TwitchEmitter
 }
 
-func NewTwitchResourceHub(emitter *twitch_source.TwitchEmitter) *TwitchResourceHub {
+func NewTwitchResourceHub(emitter *twitchsource.TwitchEmitter) *TwitchResourceHub {
 	return &TwitchResourceHub{
 		channelName2Session: make(map[string]map[string]bool),
 		session2ChannelName: make(map[string]map[string]bool),
@@ -26,7 +26,7 @@ func NewTwitchResourceHub(emitter *twitch_source.TwitchEmitter) *TwitchResourceH
 func (hub *TwitchResourceHub) GetSessionId(resourceInfo any) []string {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
-	twitchInfo, ok := resourceInfo.(twitch_source.TwitchInfo)
+	twitchInfo, ok := resourceInfo.(twitchsource.TwitchInfo)
 	if !ok {
 		return []string{}
 	}
@@ -65,24 +65,24 @@ func (hub *TwitchResourceHub) AddSession(sessionId string) {
 func diffTwitch(
 	oldResources map[string]bool,
 	newResources map[string]bool) (
-	similarResources []twitch_source.TwitchInfo,
-	removeResources []twitch_source.TwitchInfo,
-	addResources []twitch_source.TwitchInfo,
+	similarResources []twitchsource.TwitchInfo,
+	removeResources []twitchsource.TwitchInfo,
+	addResources []twitchsource.TwitchInfo,
 ) {
 	for oldChannelName := range oldResources {
 		if _, ok := newResources[oldChannelName]; !ok {
-			removeResources = append(removeResources, twitch_source.TwitchInfo{
+			removeResources = append(removeResources, twitchsource.TwitchInfo{
 				TwitchChannelName: oldChannelName,
 			})
 		} else {
-			similarResources = append(similarResources, twitch_source.TwitchInfo{
+			similarResources = append(similarResources, twitchsource.TwitchInfo{
 				TwitchChannelName: oldChannelName,
 			})
 		}
 	}
 	for newChannelName := range newResources {
 		if _, ok := oldResources[newChannelName]; !ok {
-			addResources = append(addResources, twitch_source.TwitchInfo{
+			addResources = append(addResources, twitchsource.TwitchInfo{
 				TwitchChannelName: newChannelName,
 			})
 		}
@@ -90,7 +90,7 @@ func diffTwitch(
 	return
 }
 
-func (hub *TwitchResourceHub) RegisterSessionResources(sessionId string, resources []twitch_source.TwitchInfo) {
+func (hub *TwitchResourceHub) RegisterSessionResources(sessionId string, resources []twitchsource.TwitchInfo) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
 	// get the current resources attacked to this session
@@ -120,7 +120,7 @@ func (hub *TwitchResourceHub) RegisterSessionResources(sessionId string, resourc
 	}
 }
 
-func (hub *TwitchResourceHub) registerSession(sessionId string, resourceInfo twitch_source.TwitchInfo) {
+func (hub *TwitchResourceHub) registerSession(sessionId string, resourceInfo twitchsource.TwitchInfo) {
 
 	twitchChannelName := resourceInfo.TwitchChannelName
 	if hub.session2ChannelName[sessionId] == nil {
@@ -134,7 +134,7 @@ func (hub *TwitchResourceHub) registerSession(sessionId string, resourceInfo twi
 
 }
 
-func (hub *TwitchResourceHub) deregisterSession(sessionId string, resourceInfo twitch_source.TwitchInfo) {
+func (hub *TwitchResourceHub) deregisterSession(sessionId string, resourceInfo twitchsource.TwitchInfo) {
 	twitchChannelName := resourceInfo.TwitchChannelName
 	if hub.session2ChannelName[sessionId] != nil {
 		delete(hub.session2ChannelName[sessionId], twitchChannelName)

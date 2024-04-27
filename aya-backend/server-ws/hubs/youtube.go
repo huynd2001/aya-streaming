@@ -1,7 +1,7 @@
 package hubs
 
 import (
-	youtubesource "aya-backend/server/chat_service/youtube"
+	youtubesource "aya-backend/server-ws/chat_service/youtube"
 	"fmt"
 	"github.com/fatih/color"
 	"sync"
