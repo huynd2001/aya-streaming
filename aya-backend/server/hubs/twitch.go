@@ -2,7 +2,6 @@ package hubs
 
 import (
 	twitch_source "aya-backend/server/chat_service/twitch"
-	youtubesource "aya-backend/server/chat_service/youtube"
 	"fmt"
 	"github.com/fatih/color"
 	"sync"
@@ -103,44 +102,44 @@ func (hub *TwitchResourceHub) RegisterSessionResources(sessionId string, resourc
 	for _, resourceInfo := range resources {
 		newResources[resourceInfo.TwitchChannelName] = true
 	}
-	similarRs, removeRs, addRs := diffYoutube(oldResources, newResources)
+	similarRs, removeRs, addRs := diffTwitch(oldResources, newResources)
 	for _, similarR := range similarRs {
-		fmt.Printf("Youtube: %s->%#v\n", sessionId, similarR)
+		fmt.Printf("Twitch: %s->%#v\n", sessionId, similarR)
 	}
 	for _, removeR := range removeRs {
 		red := color.New(color.FgRed).SprintfFunc()
-		fmt.Printf("Youtube: %s->%s\n", sessionId, red("-- %#v", removeRs))
+		fmt.Printf("Twitch: %s->%s\n", sessionId, red("-- %#v", removeRs))
 		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
 	for _, addR := range addRs {
 		green := color.New(color.FgGreen).SprintfFunc()
-		fmt.Printf("Youtube: %s->%s\n", sessionId, green("++ %#v", addR))
+		fmt.Printf("Twitch: %s->%s\n", sessionId, green("++ %#v", addR))
 		hub.emitter.Register(sessionId, addR)
 		hub.registerSession(sessionId, addR)
 	}
 }
 
-func (hub *TwitchResourceHub) registerSession(sessionId string, resourceInfo youtubesource.YoutubeInfo) {
+func (hub *TwitchResourceHub) registerSession(sessionId string, resourceInfo twitch_source.TwitchInfo) {
 
-	youtubeChannelId := resourceInfo.YoutubeChannelId
+	twitchChannelName := resourceInfo.TwitchChannelName
 	if hub.session2ChannelName[sessionId] == nil {
 		hub.session2ChannelName[sessionId] = make(map[string]bool)
 	}
-	if hub.channelName2Session[youtubeChannelId] == nil {
-		hub.channelName2Session[youtubeChannelId] = make(map[string]bool)
+	if hub.channelName2Session[twitchChannelName] == nil {
+		hub.channelName2Session[twitchChannelName] = make(map[string]bool)
 	}
-	hub.session2ChannelName[sessionId][youtubeChannelId] = true
-	hub.channelName2Session[youtubeChannelId][sessionId] = true
+	hub.session2ChannelName[sessionId][twitchChannelName] = true
+	hub.channelName2Session[twitchChannelName][sessionId] = true
 
 }
 
-func (hub *TwitchResourceHub) deregisterSession(sessionId string, resourceInfo youtubesource.YoutubeInfo) {
-	youtubeChannelId := resourceInfo.YoutubeChannelId
+func (hub *TwitchResourceHub) deregisterSession(sessionId string, resourceInfo twitch_source.TwitchInfo) {
+	twitchChannelName := resourceInfo.TwitchChannelName
 	if hub.session2ChannelName[sessionId] != nil {
-		delete(hub.session2ChannelName[sessionId], youtubeChannelId)
+		delete(hub.session2ChannelName[sessionId], twitchChannelName)
 	}
-	if hub.channelName2Session[youtubeChannelId] != nil {
-		delete(hub.channelName2Session[youtubeChannelId], sessionId)
+	if hub.channelName2Session[twitchChannelName] != nil {
+		delete(hub.channelName2Session[twitchChannelName], sessionId)
 	}
 }

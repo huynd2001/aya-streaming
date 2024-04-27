@@ -14,6 +14,7 @@
             <mat-select formControlName="resourceType">
               <mat-option value="discord">Discord</mat-option>
               <mat-option value="youtube">Youtube</mat-option>
+              <mat-option value="twitch">Twitch</mat-option>
             </mat-select>
           </mat-form-field>
           @if (
@@ -36,6 +37,15 @@
               <mat-form-field>
                 <mat-label>Channel ID</mat-label>
                 <input matInput formControlName="youtubeChannelId" />
+              </mat-form-field>
+            </div>
+          } @else if (
+            getAsFormGroup(resource).get("resourceType")?.value === "twitch"
+          ) {
+            <div formGroupName="resourceInfo">
+              <mat-form-field>
+                <mat-label>Channel Name</mat-label>
+                <input matInput formControlName="twitchChannelName" />
               </mat-form-field>
             </div>
           }

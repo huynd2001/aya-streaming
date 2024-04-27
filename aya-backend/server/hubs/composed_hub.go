@@ -82,6 +82,12 @@ func (m *MessageHub) GetSessionId(resourceInfo any) []string {
 		} else {
 			return []string{}
 		}
+	case chat_service.Twitch:
+		if m.twitchHub != nil {
+			return m.twitchHub.GetSessionId(hubResourceInfo.ResourceInfo)
+		} else {
+			return []string{}
+		}
 	default:
 		return []string{}
 	}

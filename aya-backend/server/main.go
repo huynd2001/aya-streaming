@@ -74,6 +74,8 @@ func parseEmitterConfig(msgSettingStr string) *composed.MessageChannelConfig {
 			config.Discord = true
 		case "youtube":
 			config.Youtube = true
+		case "twitch":
+			config.Twitch = true
 		}
 	}
 

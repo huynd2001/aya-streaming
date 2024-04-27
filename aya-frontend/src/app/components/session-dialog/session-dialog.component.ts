@@ -27,7 +27,7 @@ import { MatOption, MatSelect } from '@angular/material/select';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
 import { Validators } from '@angular/forms';
-import { SessionDialogInfo } from '../../interfaces/session';
+import { ResourceInfo, SessionDialogInfo } from '../../interfaces/session';
 
 function sessionValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -66,6 +66,18 @@ function sessionValidator(): ValidatorFn {
         if (!youtubeChannelId) {
           return {
             missingYoutubeChannelId: true,
+          };
+        } else {
+          return null;
+        }
+
+      case 'twitch':
+        const twitchChannelName = control
+          .get('resourceInfo')
+          ?.get('twitchChannelName')?.value;
+        if (!twitchChannelName) {
+          return {
+            missingTwitchChannelName: true,
           };
         } else {
           return null;
@@ -142,6 +154,9 @@ export class SessionDialogComponent implements OnInit {
                 youtubeChannelId: new FormControl(
                   resource?.resourceInfo?.youtubeChannelId || '',
                 ),
+                twitchChannelName: new FormControl(
+                  resource?.resourceInfo?.twitchChannelName || '',
+                ),
               }),
             },
             {
@@ -175,6 +190,7 @@ export class SessionDialogComponent implements OnInit {
             discordChannelId: new FormControl(''),
             discordGuildId: new FormControl(''),
             youtubeChannelId: new FormControl(''),
+            twitchChannelName: new FormControl(''),
           }),
         },
         {
@@ -210,14 +226,7 @@ export class SessionDialogComponent implements OnInit {
       resources: [],
     };
     for (let resource of dialogInfo.resources) {
-      let newResource: {
-        resourceType: string;
-        resourceInfo: {
-          discordGuildId?: string;
-          discordChannelId?: string;
-          youtubeChannelId?: string;
-        };
-      } = {
+      let newResource: ResourceInfo = {
         resourceType: resource.resourceType,
         resourceInfo: {},
       };
@@ -231,6 +240,10 @@ export class SessionDialogComponent implements OnInit {
         case 'youtube':
           newResource.resourceInfo.youtubeChannelId =
             resource.resourceInfo.youtubeChannelId;
+          break;
+        case 'twitch':
+          newResource.resourceInfo.twitchChannelName =
+            resource.resourceInfo.twitchChannelName;
           break;
         default:
           break;

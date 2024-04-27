@@ -24,5 +24,6 @@ export interface ResourceInfo {
     discordChannelId?: string;
     discordGuildId?: string;
     youtubeChannelId?: string;
+    twitchChannelName?: string;
   };
 }

@@ -97,35 +97,46 @@ func TwitchPrivateMessageHandler(parser *TwitchMessageParser, msgChan chan chat_
 	}
 }
 
-func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) error {
+func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) {
 	emitter.mutex.Lock()
 	defer emitter.mutex.Unlock()
-	err := emitter.twitchClient.Disconnect()
-	if err != nil {
-		color.Red("Error when disconnect the current twitch client\n")
-		emitter.ErrorEmitter() <- err
+	fmt.Println("djt me may #3")
+	if emitter.twitchClient != nil {
+		err := emitter.twitchClient.Disconnect()
+		if err != nil {
+			color.Red("Error when disconnect the current twitch client\n")
+			emitter.ErrorEmitter() <- err
+		}
 	}
+	fmt.Println("djt me may #4")
+
 	parser := TwitchMessageParser{}
 	newClient.OnPrivateMessage(TwitchPrivateMessageHandler(&parser, emitter.updateEmitter))
 
 	for resource := range emitter.resource2Subscriber {
 		newClient.Join(resource)
 	}
+	fmt.Println("djt me may #5")
 
 	emitter.twitchClient = newClient
-	return newClient.Connect()
+	go func() {
+		err := newClient.Connect()
+		if err != nil {
+			emitter.errorEmitter <- err
+		}
+	}()
 }
 
 func NewEmitter(config TwitchEmitterConfig) (*TwitchEmitter, error) {
+	fmt.Println("djt me may # 1")
 	emitter := TwitchEmitter{
-		updateEmitter: make(chan chat_service.MessageUpdate),
-		errorEmitter:  make(chan error),
+		updateEmitter:       make(chan chat_service.MessageUpdate),
+		errorEmitter:        make(chan error),
+		resource2Subscriber: make(map[string]map[string]bool),
 	}
 
-	err := emitter.setClient(twitch.NewAnonymousClient())
-	if err != nil {
-		return nil, err
-	}
+	emitter.setClient(twitch.NewAnonymousClient())
+	fmt.Println("djt me may # 2")
 
 	go func() {
 		workflow := auth.NewWorkflow()
@@ -161,11 +172,7 @@ func NewEmitter(config TwitchEmitterConfig) (*TwitchEmitter, error) {
 			}
 			// TODO: get the claim from the access OAUTH token from oidc code flow?
 			client := twitch.NewClient(config.BotUserName, fmt.Sprintf("oauth2:%s", token.AccessToken))
-			err = emitter.setClient(client)
-			if err != nil {
-				emitter.errorEmitter <- err
-				return
-			}
+			emitter.setClient(client)
 			expirationTime := token.Expiry
 			refreshDuration := time.Until(expirationTime)
 			select {
