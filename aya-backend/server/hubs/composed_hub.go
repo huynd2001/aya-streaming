@@ -5,6 +5,7 @@ import (
 	"aya-backend/server/chat_service"
 	"aya-backend/server/chat_service/composed"
 	discordsource "aya-backend/server/chat_service/discord"
+	twitch_source "aya-backend/server/chat_service/twitch"
 	youtubesource "aya-backend/server/chat_service/youtube"
 	"aya-backend/server/db"
 	"fmt"
@@ -22,6 +23,7 @@ type MessageHub struct {
 	mutex      sync.RWMutex
 	discordHub *DiscordResourceHub
 	youtubeHub *YoutubeResourceHub
+	twitchHub  *TwitchResourceHub
 
 	infoDB *db.InfoDB
 
@@ -33,6 +35,7 @@ func NewMessageHub(emitter *composed.MessageEmitter, gormDB *gorm.DB) *MessageHu
 	msgHub := MessageHub{
 		discordHub:         NewDiscordResourceHub(emitter.GetDiscordEmitter()),
 		youtubeHub:         NewYoutubeResourceHub(emitter.GetYoutubeEmitter()),
+		twitchHub:          NewTwitchResourceHub(emitter.GetTwitchEmitter()),
 		infoDB:             db.NewInfoDB(gormDB),
 		registeredSessions: make(map[string]bool),
 	}
@@ -95,6 +98,7 @@ func (m *MessageHub) RemoveSession(sessionId string) {
 func (m *MessageHub) RegisterSessionResources(sessionId string, resources []models.Resource) {
 	var discordResources []discordsource.DiscordInfo
 	var youtubeResources []youtubesource.YoutubeInfo
+	var twitchResources []twitch_source.TwitchInfo
 	for _, resource := range resources {
 		switch resource.ResourceType {
 		case chat_service.Discord:
@@ -107,6 +111,11 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 			if ok {
 				youtubeResources = append(youtubeResources, youtubeResource)
 			}
+		case chat_service.Twitch:
+			twitchResource, ok := resource.ResourceInfo.(twitch_source.TwitchInfo)
+			if ok {
+				twitchResources = append(twitchResources, twitchResource)
+			}
 		default:
 		}
 	}
@@ -115,6 +124,9 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 	}
 	if m.youtubeHub != nil {
 		m.youtubeHub.RegisterSessionResources(sessionId, youtubeResources)
+	}
+	if m.twitchHub != nil {
+		m.twitchHub.RegisterSessionResources(sessionId, twitchResources)
 	}
 	m.registeredSessions[sessionId] = true
 
@@ -129,5 +141,8 @@ func (m *MessageHub) AddSession(sessionId string) {
 	}
 	if m.youtubeHub != nil {
 		m.youtubeHub.AddSession(sessionId)
+	}
+	if m.twitchHub != nil {
+		m.twitchHub.AddSession(sessionId)
 	}
 }

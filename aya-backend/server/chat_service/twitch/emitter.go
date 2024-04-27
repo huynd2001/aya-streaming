@@ -108,6 +108,10 @@ func (emitter *TwitchEmitter) setClient(newClient *twitch.Client) error {
 	parser := TwitchMessageParser{}
 	newClient.OnPrivateMessage(TwitchPrivateMessageHandler(&parser, emitter.updateEmitter))
 
+	for resource := range emitter.resource2Subscriber {
+		newClient.Join(resource)
+	}
+
 	emitter.twitchClient = newClient
 	return newClient.Connect()
 }
@@ -116,19 +120,12 @@ func NewEmitter(config TwitchEmitterConfig) (*TwitchEmitter, error) {
 	emitter := TwitchEmitter{
 		updateEmitter: make(chan chat_service.MessageUpdate),
 		errorEmitter:  make(chan error),
-		twitchClient:  twitch.NewAnonymousClient(),
 	}
 
-	clientUpdateCh := make(chan *twitch.Client)
-	go func() {
-		for {
-			newClient := <-clientUpdateCh
-			err := emitter.setClient(newClient)
-			if err != nil {
-				emitter.errorEmitter <- err
-			}
-		}
-	}()
+	err := emitter.setClient(twitch.NewAnonymousClient())
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
 		workflow := auth.NewWorkflow()

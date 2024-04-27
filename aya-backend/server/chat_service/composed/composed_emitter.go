@@ -43,6 +43,10 @@ func (messageEmitter *MessageEmitter) GetYoutubeEmitter() *youtubesource.Youtube
 	return messageEmitter.youtubeEmitter
 }
 
+func (messageEmitter *MessageEmitter) GetTwitchEmitter() *twitch_source.TwitchEmitter {
+	return messageEmitter.twitchEmitter
+}
+
 type MessageChannelConfig struct {
 	Discord bool
 	Test    bool

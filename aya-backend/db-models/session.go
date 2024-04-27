@@ -3,6 +3,7 @@ package models
 import (
 	"aya-backend/server/chat_service"
 	discordsource "aya-backend/server/chat_service/discord"
+	twitch_source "aya-backend/server/chat_service/twitch"
 	youtubesource "aya-backend/server/chat_service/youtube"
 	"encoding/json"
 	"fmt"
@@ -57,6 +58,15 @@ func (r *Resource) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("resource of type 'youtube', but cannot parse the info: %s", err.Error())
 		} else {
 			r.ResourceInfo = youtubeInfo
+			return nil
+		}
+	case chat_service.Twitch:
+		var twitchInfo twitch_source.TwitchInfo
+		err := json.Unmarshal(resourceInfoStr, &twitchInfo)
+		if err != nil {
+			return fmt.Errorf("resource of type 'twitch', but cannot parse the info: %s", err.Error())
+		} else {
+			r.ResourceInfo = twitchInfo
 			return nil
 		}
 	default:
