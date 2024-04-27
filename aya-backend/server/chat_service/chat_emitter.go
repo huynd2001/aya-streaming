@@ -1,4 +1,4 @@
-package service
+package chat_service
 
 type ChatEmitter interface {
 	// UpdateEmitter returns a new channel that sends out the MessageUpdate

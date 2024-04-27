@@ -1,7 +1,7 @@
 package youtube_source
 
 import (
-	"aya-backend/server/service"
+	"aya-backend/server/chat_service"
 	"fmt"
 	"sync"
 	"time"
@@ -19,10 +19,10 @@ type youtubeRegister struct {
 	channelKillSignal map[string]chan bool
 	apiCaller         *liveChatApiCaller
 	ytService         *yt.Service
-	msgChan           chan service.MessageUpdate
+	msgChan           chan chat_service.MessageUpdate
 }
 
-func newYoutubeRegister(ytService *yt.Service, msgChan chan service.MessageUpdate) *youtubeRegister {
+func newYoutubeRegister(ytService *yt.Service, msgChan chan chat_service.MessageUpdate) *youtubeRegister {
 	youtubeReg := youtubeRegister{
 		channelKillSignal: make(map[string]chan bool),
 		apiCaller:         newApiCaller(ytService),
@@ -80,9 +80,9 @@ func listenForChatMessages(
 	channelId string,
 	stopSignal chan bool,
 	parser *YoutubeMessageParser,
-) chan service.MessageUpdate {
+) chan chat_service.MessageUpdate {
 	var err error
-	msgChan := make(chan service.MessageUpdate)
+	msgChan := make(chan chat_service.MessageUpdate)
 
 	go func() {
 		<-stopSignal
@@ -112,9 +112,9 @@ func listenForChatMessages(
 							publishedTime = time.Now()
 						}
 						fmt.Printf("%#v\n", item)
-						msgChan <- service.MessageUpdate{
+						msgChan <- chat_service.MessageUpdate{
 							UpdateTime: publishedTime,
-							Update:     service.New,
+							Update:     chat_service.New,
 							Message:    parser.ParseMessage(item),
 							ExtraFields: YoutubeInfo{
 								YoutubeChannelId: channelId,
@@ -156,7 +156,7 @@ func (register *youtubeRegister) registerChannel(channelId string) {
 
 	ytParser := YoutubeMessageParser{}
 
-	setupChannel := func() chan service.MessageUpdate {
+	setupChannel := func() chan chat_service.MessageUpdate {
 
 		liveChatId, err := getLiveChatIdFromChannelId(register.ytService, channelId)
 		if err != nil {
@@ -178,7 +178,7 @@ func (register *youtubeRegister) registerChannel(channelId string) {
 					return
 				} else {
 					ok := true
-					var ytMsg service.MessageUpdate
+					var ytMsg chat_service.MessageUpdate
 					for ok {
 						ytMsg, ok = <-liveChatMsg
 						if ok {

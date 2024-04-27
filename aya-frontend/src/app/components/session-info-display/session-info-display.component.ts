@@ -46,6 +46,7 @@ export class SessionInfoDisplayComponent implements OnInit {
             discordChannelId: resource?.resourceInfo?.discordChannelId,
             discordGuildId: resource?.resourceInfo?.discordGuildId,
             youtubeChannelId: resource?.resourceInfo?.youtubeChannelId,
+            twitchChannelName: resource?.resourceInfo?.twitchChannelName,
           },
         };
       });
@@ -71,6 +72,10 @@ export class SessionInfoDisplayComponent implements OnInit {
     this.matIconRegistry.addSvgIcon(
       `youtube_logo`,
       this.domSanitizer.bypassSecurityTrustResourceUrl('/youtube.svg'),
+    );
+    this.matIconRegistry.addSvgIcon(
+      `twitch_logo`,
+      this.domSanitizer.bypassSecurityTrustResourceUrl('/twitch.svg'),
     );
   }
 }

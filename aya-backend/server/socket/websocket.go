@@ -1,9 +1,9 @@
 package socket
 
 import (
+	. "aya-backend/server/chat_service"
+	. "aya-backend/server/chat_service/composed"
 	"aya-backend/server/hubs"
-	. "aya-backend/server/service"
-	. "aya-backend/server/service/composed"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"

@@ -2,9 +2,10 @@ package youtube_source
 
 import (
 	"aya-backend/server/auth"
-	"aya-backend/server/service"
+	"aya-backend/server/chat_service"
 	"context"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -18,17 +19,17 @@ type YoutubeEmitterConfig struct {
 	ClientID     string
 	ClientSecret string
 
-	Router           *mux.Router
-	RedirectBasedUrl string
+	AuthRouter           *mux.Router
+	AuthRedirectBasedUrl string
 }
 
 type YoutubeEmitter struct {
-	service.ChatEmitter
-	service.ResourceRegister
+	chat_service.ChatEmitter
+	chat_service.ResourceRegister
 
 	mutex sync.Mutex
 
-	updateEmitter       chan service.MessageUpdate
+	updateEmitter       chan chat_service.MessageUpdate
 	errorEmitter        chan error
 	register            *youtubeRegister
 	resource2Subscriber map[string]map[string]bool
@@ -72,7 +73,7 @@ func (emitter *YoutubeEmitter) Deregister(subscriber string, resourceInfo any) {
 
 }
 
-func (emitter *YoutubeEmitter) UpdateEmitter() chan service.MessageUpdate {
+func (emitter *YoutubeEmitter) UpdateEmitter() chan chat_service.MessageUpdate {
 	return emitter.updateEmitter
 }
 
@@ -102,7 +103,7 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 	oauth2Config := oauth2.Config{
 		ClientID:     config.ClientID,
 		ClientSecret: config.ClientSecret,
-		RedirectURL:  fmt.Sprintf("%s/youtube.callback", config.RedirectBasedUrl),
+		RedirectURL:  fmt.Sprintf("%s/youtube.callback", config.AuthRedirectBasedUrl),
 
 		// Discovery returns the OAuth2 endpoints.
 		Endpoint: google.Endpoint,
@@ -112,12 +113,12 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 	}
 
 	workflow.SetUpRedirectAndCodeChallenge(
-		config.Router.PathPrefix("/youtube.redirect").Subrouter(),
-		config.Router.PathPrefix("/youtube.callback").Subrouter(),
+		config.AuthRouter.PathPrefix("/youtube.redirect").Subrouter(),
+		config.AuthRouter.PathPrefix("/youtube.callback").Subrouter(),
 	)
-	workflow.SetupAuth(
+	workflow.SetUpAuth(
 		oauth2Config,
-		fmt.Sprintf("%s/youtube.redirect", config.RedirectBasedUrl),
+		fmt.Sprintf("%s/youtube.redirect", config.AuthRedirectBasedUrl),
 	)
 
 	// Await for the tokenSource from the workflow channel
@@ -134,7 +135,7 @@ func getOauthYTService(ctx context.Context, config *YoutubeEmitterConfig) (*yt.S
 // retrieved from the workflow.
 func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 
-	messageUpdates := make(chan service.MessageUpdate)
+	messageUpdates := make(chan chat_service.MessageUpdate)
 	errorCh := make(chan error)
 
 	ctx := context.Background()
@@ -160,6 +161,6 @@ func NewEmitter(config *YoutubeEmitterConfig) (*YoutubeEmitter, error) {
 		youtubeEmitter.register.SetYTService(ytService)
 	}()
 
-	fmt.Printf("New Youtube Emitter created!\n")
+	color.Green("New Youtube Emitter created!\n")
 	return &youtubeEmitter, nil
 }

@@ -1,7 +1,7 @@
 package hubs
 
 import (
-	discordsource "aya-backend/server/service/discord"
+	discordsource "aya-backend/server/chat_service/discord"
 	"fmt"
 	"github.com/fatih/color"
 	"strings"

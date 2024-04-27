@@ -23,7 +23,16 @@
           </mat-expansion-panel-header>
           <p>Channel Id: {{ resource.resourceInfo.youtubeChannelId }}</p>
         }
-        @case ("default") {
+        @case ("twitch") {
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon svgIcon="twitch_logo"></mat-icon>
+            </mat-panel-title>
+            <mat-panel-description>Twitch</mat-panel-description>
+          </mat-expansion-panel-header>
+          <p>Channel Name: {{ resource.resourceInfo.twitchChannelName }}</p>
+        }
+        @default {
           <mat-expansion-panel-header>
             <mat-panel-title>
               <mat-icon>error</mat-icon>

@@ -1,4 +1,4 @@
-package service
+package chat_service
 
 type ResourceRegister interface {
 	Register(subscriber string, resourceInfo any)

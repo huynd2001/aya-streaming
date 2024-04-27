@@ -3,8 +3,8 @@ package main
 import (
 	models "aya-backend/db-models"
 	"aya-backend/server/api"
+	"aya-backend/server/chat_service/composed"
 	"aya-backend/server/hubs"
-	"aya-backend/server/service/composed"
 	"aya-backend/server/socket"
 	"errors"
 	"fmt"
@@ -74,6 +74,8 @@ func parseEmitterConfig(msgSettingStr string) *composed.MessageChannelConfig {
 			config.Discord = true
 		case "youtube":
 			config.Youtube = true
+		case "twitch":
+			config.Twitch = true
 		}
 	}
 

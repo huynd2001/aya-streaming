@@ -2,11 +2,12 @@ package hubs
 
 import (
 	models "aya-backend/db-models"
+	"aya-backend/server/chat_service"
+	"aya-backend/server/chat_service/composed"
+	discordsource "aya-backend/server/chat_service/discord"
+	twitch_source "aya-backend/server/chat_service/twitch"
+	youtubesource "aya-backend/server/chat_service/youtube"
 	"aya-backend/server/db"
-	"aya-backend/server/service"
-	"aya-backend/server/service/composed"
-	discordsource "aya-backend/server/service/discord"
-	youtubesource "aya-backend/server/service/youtube"
 	"fmt"
 	"gorm.io/gorm"
 	"sync"
@@ -22,6 +23,7 @@ type MessageHub struct {
 	mutex      sync.RWMutex
 	discordHub *DiscordResourceHub
 	youtubeHub *YoutubeResourceHub
+	twitchHub  *TwitchResourceHub
 
 	infoDB *db.InfoDB
 
@@ -33,6 +35,7 @@ func NewMessageHub(emitter *composed.MessageEmitter, gormDB *gorm.DB) *MessageHu
 	msgHub := MessageHub{
 		discordHub:         NewDiscordResourceHub(emitter.GetDiscordEmitter()),
 		youtubeHub:         NewYoutubeResourceHub(emitter.GetYoutubeEmitter()),
+		twitchHub:          NewTwitchResourceHub(emitter.GetTwitchEmitter()),
 		infoDB:             db.NewInfoDB(gormDB),
 		registeredSessions: make(map[string]bool),
 	}
@@ -67,15 +70,21 @@ func (m *MessageHub) GetSessionId(resourceInfo any) []string {
 		return []string{}
 	}
 	switch hubResourceInfo.ResourceType {
-	case service.Discord:
+	case chat_service.Discord:
 		if m.discordHub != nil {
 			return m.discordHub.GetSessionId(hubResourceInfo.ResourceInfo)
 		} else {
 			return []string{}
 		}
-	case service.Youtube:
+	case chat_service.Youtube:
 		if m.youtubeHub != nil {
 			return m.youtubeHub.GetSessionId(hubResourceInfo.ResourceInfo)
+		} else {
+			return []string{}
+		}
+	case chat_service.Twitch:
+		if m.twitchHub != nil {
+			return m.twitchHub.GetSessionId(hubResourceInfo.ResourceInfo)
 		} else {
 			return []string{}
 		}
@@ -95,17 +104,23 @@ func (m *MessageHub) RemoveSession(sessionId string) {
 func (m *MessageHub) RegisterSessionResources(sessionId string, resources []models.Resource) {
 	var discordResources []discordsource.DiscordInfo
 	var youtubeResources []youtubesource.YoutubeInfo
+	var twitchResources []twitch_source.TwitchInfo
 	for _, resource := range resources {
 		switch resource.ResourceType {
-		case service.Discord:
+		case chat_service.Discord:
 			discordResource, ok := resource.ResourceInfo.(discordsource.DiscordInfo)
 			if ok {
 				discordResources = append(discordResources, discordResource)
 			}
-		case service.Youtube:
+		case chat_service.Youtube:
 			youtubeResource, ok := resource.ResourceInfo.(youtubesource.YoutubeInfo)
 			if ok {
 				youtubeResources = append(youtubeResources, youtubeResource)
+			}
+		case chat_service.Twitch:
+			twitchResource, ok := resource.ResourceInfo.(twitch_source.TwitchInfo)
+			if ok {
+				twitchResources = append(twitchResources, twitchResource)
 			}
 		default:
 		}
@@ -115,6 +130,9 @@ func (m *MessageHub) RegisterSessionResources(sessionId string, resources []mode
 	}
 	if m.youtubeHub != nil {
 		m.youtubeHub.RegisterSessionResources(sessionId, youtubeResources)
+	}
+	if m.twitchHub != nil {
+		m.twitchHub.RegisterSessionResources(sessionId, twitchResources)
 	}
 	m.registeredSessions[sessionId] = true
 
@@ -129,5 +147,8 @@ func (m *MessageHub) AddSession(sessionId string) {
 	}
 	if m.youtubeHub != nil {
 		m.youtubeHub.AddSession(sessionId)
+	}
+	if m.twitchHub != nil {
+		m.twitchHub.AddSession(sessionId)
 	}
 }
