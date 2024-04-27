@@ -107,7 +107,7 @@ func (hub *YoutubeResourceHub) RegisterSessionResources(sessionId string, resour
 	}
 	for _, removeR := range removeRs {
 		red := color.New(color.FgRed).SprintfFunc()
-		fmt.Printf("Youtube: %s->%s\n", sessionId, red("-- %#v", removeRs))
+		fmt.Printf("Youtube: %s->%s\n", sessionId, red("-- %#v", removeR))
 		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}

@@ -108,7 +108,7 @@ func (hub *TwitchResourceHub) RegisterSessionResources(sessionId string, resourc
 	}
 	for _, removeR := range removeRs {
 		red := color.New(color.FgRed).SprintfFunc()
-		fmt.Printf("Twitch: %s->%s\n", sessionId, red("-- %#v", removeRs))
+		fmt.Printf("Twitch: %s->%s\n", sessionId, red("-- %#v", removeR))
 		hub.emitter.Deregister(sessionId, removeR)
 		hub.deregisterSession(sessionId, removeR)
 	}
