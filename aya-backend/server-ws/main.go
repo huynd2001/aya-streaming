@@ -11,7 +11,6 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -89,7 +88,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		fmt.Println("Error loading .env file")
 	}
 
 	r := mux.NewRouter()

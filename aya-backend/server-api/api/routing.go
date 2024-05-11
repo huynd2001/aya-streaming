@@ -133,7 +133,7 @@ func jwtAuthMiddleware(next http.Handler) http.Handler {
 			default:
 				fmt.Println(err.Error())
 				writer.WriteHeader(http.StatusInternalServerError)
-				_, _ = writer.Write([]byte(marshalReturnData(nil, "Recognized Error!")))
+				_, _ = writer.Write([]byte(marshalReturnData(nil, "Unrecognized Error!")))
 				return
 			}
 		}
