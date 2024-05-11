@@ -1,12 +1,9 @@
 package main
 
 import (
-	model "aya-backend/db-models"
-	"errors"
+	models "aya-backend/db-models"
 	"fmt"
 	"github.com/joho/godotenv"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"os"
 	"path"
 )
@@ -36,70 +33,23 @@ func main() {
 			dataLocation = DEFAULT_DB_PATH
 		}
 
-		err = os.MkdirAll(dataLocation, 0777)
-		if err != nil {
-			fmt.Printf("Error during creating %s directory: %s\n", dataLocation, err.Error())
-			return
-		}
-
 		dataPath = path.Join(dataLocation, DB_NAME)
 
-		if _, err := os.Stat(dataPath); errors.Is(err, os.ErrNotExist) {
-			fmt.Printf("%s not found! Start initializing db...\n", dataPath)
-			_, err2 := os.Create(dataPath)
-			if err2 != nil {
-				fmt.Printf("Error during making %s: %s\n", path.Join(dataLocation, DB_NAME), err.Error())
-				return
-			}
-		} else {
-			fmt.Printf("%s found!\n", dataPath)
+		err := MakeDirFile(dataPath)
+		if err != nil {
+			fmt.Printf("Error: Cannot create directory: %s\n", err.Error())
+			return
 		}
 
 	} else {
 		dataPath = sqlDb
 	}
 
-	db, err := gorm.Open(sqlite.Open(dataPath), &gorm.Config{})
+	err = DbMigration(dataPath, &models.GORMSession{}, &models.GORMUser{})
 	if err != nil {
-		fmt.Printf("Error when connect to db %s: %s\n", dataPath, err.Error())
+		fmt.Printf("Error: %s\n", err.Error())
 		return
-	}
-
-	var session model.GORMSession
-	err = db.AutoMigrate(&session)
-	if err != nil {
-		fmt.Printf("Error when migrating the interface Session: %s\n", err.Error())
-		return
-	}
-
-	var user model.GORMUser
-	err = db.AutoMigrate(&user)
-	if err != nil {
-		fmt.Printf("Error when migrating the interface User: %s\n", err.Error())
 	}
 
 	fmt.Printf("Migrate database successfully! Have fun developing.\n")
-
-	result := db.
-		Model(&model.GORMUser{}).
-		Preload("Sessions").
-		Where(&model.GORMUser{Email: "ndhuy01@gmail.com"}, "email").
-		First(&user)
-	if result.Error != nil {
-		fmt.Printf("Error when getting user info: %s\n", result.Error.Error())
-	} else {
-		fmt.Printf("User info: %#v\n", user)
-	}
-
-	result = db.
-		Model(&model.GORMSession{}).
-		Preload("User").
-		Where(&model.GORMSession{Model: gorm.Model{ID: 18}}).
-		First(&session)
-
-	if result.Error != nil {
-		fmt.Printf("Error when getting session info: %s\n", result.Error.Error())
-	} else {
-		fmt.Printf("Session info: %#v\n", session)
-	}
 }

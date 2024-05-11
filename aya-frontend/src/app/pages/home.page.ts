@@ -21,7 +21,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { MatDialog } from '@angular/material/dialog';
 import { SessionDialogComponent } from '../components/session-dialog/session-dialog.component';
 import { SessionInfoService } from '../services/session-info.service';
-import { SessionDialogInfo, DisplaySessionInfo } from '../interfaces/session';
+import { DisplaySessionInfo, SessionDialogInfo } from '../interfaces/session';
 import {
   MatCard,
   MatCardActions,
@@ -36,7 +36,6 @@ import {
   MatSlideToggle,
   MatSlideToggleChange,
 } from '@angular/material/slide-toggle';
-import { injectRouter } from '@analogjs/router';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { environment } from '../../environments/environment';
 

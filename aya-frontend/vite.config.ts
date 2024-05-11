@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     analog({
-      ssr: false,
+      ssr: true,
       vite: {
         inlineStylesExtension: 'scss',
       },
@@ -26,6 +26,9 @@ export default defineConfig(({ mode }) => ({
     setupFiles: ['src/test.ts'],
     include: ['**/*.spec.ts'],
     reporters: ['default'],
+  },
+  ssr: {
+    noExternal: ['angular-auth-oidc-client'],
   },
   define: {
     'import.meta.vitest': mode !== 'production',

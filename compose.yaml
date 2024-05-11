@@ -1,0 +1,51 @@
+services:
+
+  db_migration:
+    restart: "no"
+    env_file:
+      - .env.db_migration
+    build:
+      context: aya-backend
+      dockerfile: db_migration.Dockerfile
+    volumes:
+      - aya-db:/app/data/
+
+  server_api:
+    depends_on:
+      - db_migration
+    env_file:
+      - .env.server_api
+    expose:
+      - "6000"
+    build:
+      context: aya-backend
+      dockerfile: server_api.Dockerfile
+    volumes:
+      - aya-db:/app/data/
+
+  server_ws:
+    depends_on:
+      - db_migration
+    env_file:
+      - .env.server_ws
+    ports:
+      - "8000:8000"
+    build:
+      context: aya-backend
+      dockerfile: server_ws.Dockerfile
+    volumes:
+      - aya-db:/app/data/
+
+  web_app:
+    env_file:
+      - .env.web_app
+    depends_on:
+      - server_api
+      - server_ws
+    ports:
+      - "3000:3000"
+    build:
+      context: aya-frontend
+
+volumes:
+  aya-db:

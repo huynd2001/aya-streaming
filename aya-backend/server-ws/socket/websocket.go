@@ -9,9 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	ws "github.com/gorilla/websocket"
 	"net/http"
-	"net/url"
 	"os"
-	"slices"
 	"sync"
 	"unicode/utf8"
 )
@@ -168,21 +166,7 @@ func NewWSServer(
 	upg := ws.Upgrader{}
 
 	upg.CheckOrigin = func(r *http.Request) bool {
-		origin := r.Header["Origin"]
-
-		// this means that the ws call was from the same origin as the host
-		if len(origin) == 0 {
-			return true
-		}
-
-		u, err := url.Parse(origin[0])
-		if err != nil {
-			return false
-		}
-
-		return slices.ContainsFunc(acceptableOrigin, func(acceptableHost string) bool {
-			return equalASCIIFold(u.Host, acceptableHost)
-		})
+		return true
 	}
 
 	wsServer := WSServer{
